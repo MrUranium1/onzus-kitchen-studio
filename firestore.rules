@@ -1,0 +1,145 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // 0. Global Safety Net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // --- Helpers ---
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isEmailVerified() {
+      return isSignedIn() && request.auth.token.email_verified == true;
+    }
+
+    function isAdmin() {
+      return isSignedIn() && (
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid)) ||
+        request.auth.token.email == 'hossainmehir2006@gmail.com'
+      );
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    // --- Product Validation ---
+    function isValidProduct(data) {
+      return data.keys().hasAll(['id', 'name', 'price', 'img', 'category', 'shortDesc', 'longDesc', 'rating', 'reviews'])
+        && (data.id is number || data.id is string)
+        && data.name is string && data.name.size() > 0 && data.name.size() <= 100
+        && data.price is number && data.price >= 0
+        && data.img is string && data.img.size() <= 500
+        && data.category is string && data.category.size() <= 100
+        && data.shortDesc is string && data.shortDesc.size() <= 500
+        && data.longDesc is string && data.longDesc.size() <= 5000
+        && data.rating is number && data.rating >= 0 && data.rating <= 5
+        && data.reviews is number && data.reviews >= 0
+        && (!data.keys().hasAny(['ribbon']) || data.ribbon is string)
+        && (!data.keys().hasAny(['featured']) || data.featured is bool)
+        && (!data.keys().hasAny(['featuredOrder']) || data.featuredOrder is number);
+    }
+
+    // --- User Validation ---
+    function isValidUser(data) {
+      return data.keys().hasAll(['uid', 'email', 'role', 'createdAt'])
+        && data.uid == request.auth.uid
+        && data.email == request.auth.token.email
+        && data.role in ['user', 'admin']
+        && (data.createdAt is timestamp || data.createdAt is string);
+    }
+
+    // --- Order Validation ---
+    function isValidOrder(data) {
+      return data.keys().hasAll(['userId', 'items', 'totalAmount', 'location', 'status', 'createdAt'])
+        && (data.userId == request.auth.uid || isAdmin())
+        && data.items is list
+        && data.totalAmount is number && data.totalAmount >= 0
+        && data.location is string && data.location.size() <= 2000
+        && data.status in ['pending', 'preparing', 'ready', 'delivered', 'cancelled']
+        && (data.createdAt is timestamp || data.createdAt is string);
+    }
+
+    // --- Curation Validation ---
+    function isValidCuration(data) {
+      return data.keys().hasAll(['id', 'imageUrl', 'order'])
+        && data.id is string
+        && data.imageUrl is string && data.imageUrl.size() <= 1000
+        && data.order is number
+        && (!data.keys().hasAny(['title']) || data.title is string)
+        && (!data.keys().hasAny(['subtitle']) || data.subtitle is string);
+    }
+
+    // --- Rules ---
+
+    match /home_curation/{itemId} {
+      allow read: if true;
+      allow create: if isAdmin() && isValidId(itemId) && isValidCuration(incoming());
+      allow update: if isAdmin() && isValidCuration(incoming());
+      allow delete: if isAdmin();
+    }
+
+    match /products/{productId} {
+      allow read: if true; // Publicly readable menu
+      
+      allow create: if isAdmin() && isValidId(productId) && isValidProduct(incoming());
+      
+      allow update: if isAdmin() && (
+        isValidProduct(incoming()) && (
+          // Allow all fields to be updated by admin
+          incoming().diff(existing()).affectedKeys().hasAny(['name', 'price', 'img', 'category', 'shortDesc', 'longDesc', 'rating', 'reviews', 'ribbon', 'featured', 'featuredOrder'])
+        )
+      );
+      
+      allow delete: if isAdmin();
+    }
+
+    match /orders/{orderId} {
+      allow read: if isSignedIn() && (isOwner(resource.data.userId) || isAdmin());
+      allow create: if isSignedIn() && isValidId(orderId) && isValidOrder(incoming());
+      allow update: if isAdmin() && (
+        isValidOrder(incoming()) && (
+          incoming().diff(existing()).affectedKeys().hasOnly(['status'])
+        )
+      );
+      allow delete: if isAdmin();
+    }
+
+    match /users/{userId} {
+      allow get: if isOwner(userId);
+      allow list: if isOwner(userId); // Explicitly check resource.data implicitly by match variable
+      
+      allow create: if isOwner(userId) && isValidUser(incoming()) && incoming().role == 'user';
+      
+      allow update: if isOwner(userId) && isValidUser(incoming()) 
+        && incoming().role == existing().role // Prevent role escalation
+        && incoming().createdAt == existing().createdAt; // Immutable field
+        
+      allow delete: if isOwner(userId);
+    }
+
+    match /admins/{adminId} {
+      allow read: if isSignedIn();
+      allow write: if isOwner(adminId) && request.auth.token.email == 'hossainmehir2006@gmail.com';
+    }
+    
+    match /test/connection {
+      allow read: if true;
+    }
+  }
+}

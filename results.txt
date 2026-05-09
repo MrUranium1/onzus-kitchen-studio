@@ -1,0 +1,16 @@
+node_modules/@protobufjs/fetch/tests/index.js:var fetch = require("..");
+node_modules/protobufjs/src/root.js:Root.prototype.fetch = util.fetch;
+node_modules/protobufjs/dist/light/protobuf.js:Root.prototype.fetch = util.fetch;
+node_modules/protobufjs/dist/protobuf.js:Root.prototype.fetch = util.fetch;
+node_modules/.vite/deps/react-router-dom.js:      router2.fetch = instrumentedFetch;
+node_modules/.vite/deps/react-router-dom.js:    if (prefetch === "render") {
+node_modules/.vite/deps/react-router-dom.js:    if (prefetch === "viewport") {
+node_modules/.vite/deps/react-router-dom.js:    prefetch = "none",
+node_modules/react-router/dist/development/chunk-AM3XM4LS.js:      router.fetch = instrumentedFetch;
+node_modules/react-router/dist/development/chunk-AM3XM4LS.js:    if (prefetch === "render") {
+node_modules/react-router/dist/development/chunk-AM3XM4LS.js:    if (prefetch === "viewport") {
+node_modules/react-router/dist/development/chunk-Z5YQYACE.js:    prefetch = "none",
+node_modules/react-router/dist/production/chunk-LCJTIOKZ.js:      router.fetch = instrumentedFetch;
+node_modules/react-router/dist/production/chunk-LCJTIOKZ.js:    if (prefetch === "render") {
+node_modules/react-router/dist/production/chunk-LCJTIOKZ.js:    if (prefetch === "viewport") {
+node_modules/react-router/dist/production/chunk-YBQJ3ABE.js:    prefetch = "none",

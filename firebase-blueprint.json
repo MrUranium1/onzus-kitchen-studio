@@ -1,0 +1,91 @@
+{
+  "entities": {
+    "Product": {
+      "title": "Product",
+      "description": "A menu item product information",
+      "type": "object",
+      "properties": {
+        "id": { "type": "number" },
+        "name": { "type": "string" },
+        "price": { "type": "number" },
+        "img": { "type": "string", "format": "uri" },
+        "category": { "type": "string" },
+        "shortDesc": { "type": "string" },
+        "longDesc": { "type": "string" },
+        "rating": { "type": "number" },
+        "reviews": { "type": "number" },
+        "ribbon": { "type": "string" }
+      },
+      "required": ["id", "name", "price", "img", "category", "shortDesc", "longDesc", "rating", "reviews"]
+    },
+    "User": {
+      "title": "User",
+      "description": "User profile information",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "displayName": { "type": "string" },
+        "photoURL": { "type": "string", "format": "uri" },
+        "role": { "type": "string", "enum": ["user", "admin"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "email", "role", "createdAt"]
+    },
+    "Order": {
+      "title": "Order",
+      "description": "Customer order information",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "items": { "type": "array" },
+        "totalAmount": { "type": "number" },
+        "location": { "type": "string" },
+        "status": { "type": "string", "enum": ["pending", "processing", "completed", "cancelled"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "items", "totalAmount", "location", "status", "createdAt"]
+    },
+    "HomeCuration": {
+      "title": "HomeCuration",
+      "description": "Featured banners for home page",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "imageUrl": { "type": "string", "format": "uri" },
+        "title": { "type": "string" },
+        "subtitle": { "type": "string" },
+        "order": { "type": "number" }
+      },
+      "required": ["id", "imageUrl", "order"]
+    }
+  },
+  "firestore": {
+    "/products/{productId}": {
+      "schema": "Product",
+      "description": "Collection of all menu items"
+    },
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "Collection of user profiles"
+    },
+    "/orders/{orderId}": {
+      "schema": "Order",
+      "description": "Collection of customer orders"
+    },
+    "/home_curation/{itemId}": {
+      "schema": "HomeCuration",
+      "description": "Collection of featured homepage content"
+    },
+    "/admins/{adminId}": {
+      "schema": {
+        "type": "object",
+        "properties": {
+          "email": { "type": "string", "format": "email" }
+        },
+        "required": ["email"]
+      },
+      "description": "Collection of admin user UIDs"
+    }
+  }
+}

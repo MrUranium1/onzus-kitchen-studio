@@ -1,0 +1,6 @@
+{
+  "name": "Onzu's Kitchen",
+  "description": "A home bakery website featuring a menu, gallery, and cart system.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["E-commerce", "User Authentication", "Admin Dashboard"]
+}

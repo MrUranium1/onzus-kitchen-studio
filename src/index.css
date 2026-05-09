@@ -1,0 +1,94 @@
+@import "tailwindcss";
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400;1,600&family=Lato:wght@300;400;700&family=Dancing+Script:wght@600;700&display=swap');
+
+@theme {
+  --color-cream: #FDF6EC;
+  --color-biscuit: #F2E0C8;
+  --color-caramel: #C8894E;
+  --color-mocha: #7B4F2E;
+  --color-espresso: #3E2010;
+  --color-honey: #E8A84C;
+  --color-rust: #C45A1A;
+
+  --font-display: "Playfair Display", serif;
+  --font-script: "Dancing Script", cursive;
+  --font-body: "Lato", sans-serif;
+}
+
+@layer base {
+  body {
+    @apply font-body bg-cream text-espresso;
+  }
+
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+    opacity: 0.35;
+  }
+}
+
+@layer components {
+  .z-content {
+    @apply relative z-10;
+  }
+
+  .reveal {
+    opacity: 0;
+    transform: translateY(32px);
+    transition: opacity 0.7s ease, transform 0.7s ease;
+  }
+
+  .reveal.visible {
+    opacity: 1;
+    transform: none;
+  }
+
+  .wa-float {
+    animation: waPulse 2.5s ease-in-out infinite;
+  }
+
+  @keyframes waPulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(37, 211, 102, 0.5); }
+    50% { box-shadow: 0 0 0 12px rgba(37, 211, 102, 0); }
+  }
+
+  .hero-bg {
+    background: linear-gradient(135deg, #3E2010 0%, #7B4F2E 45%, #C8894E 100%);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .marquee-track {
+    display: flex;
+    width: max-content;
+    animation: marquee 22s linear infinite;
+  }
+
+  @keyframes marquee {
+    from { transform: translateX(0); }
+    to { transform: translateX(-50%); }
+  }
+
+  .product-card {
+    transition: transform 0.35s cubic-bezier(.22,.68,0,1.2), box-shadow 0.35s;
+  }
+
+  .product-card:hover {
+    transform: translateY(-8px) scale(1.015);
+    box-shadow: 0 24px 48px rgba(62,32,16,0.18);
+  }
+
+  .ribbon {
+    @apply absolute top-4 -left-2 bg-rust text-white text-[0.65rem] font-bold tracking-wider py-1 px-3;
+    clip-path: polygon(0 0, calc(100% - 8px) 0, 100% 50%, calc(100% - 8px) 100%, 0 100%);
+  }
+
+  .testi-card {
+    background: linear-gradient(145deg, #fff8ee, #fdf0de);
+    border: 1px solid rgba(200, 137, 78, 0.2);
+  }
+}
