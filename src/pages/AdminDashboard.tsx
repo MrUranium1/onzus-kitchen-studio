@@ -73,7 +73,7 @@ export default function AdminDashboard() {
 
   const fetchItems = async () => {
     const items = await getProducts();
-    if (items.length === 0 && user && (isAdmin || user.email === 'hossainmehir2006@gmail.com')) {
+    if (items.length === 0 && user && (isAdmin || ['hossainmehir2006@gmail.com', 'onzu080@gmail.com'].includes(user.email || ''))) {
       // Auto-seed if empty for admin
       for (const p of PRODUCTS) {
         await createProduct({ ...p, featured: [1,4,8,14].includes(p.id) });
@@ -92,7 +92,7 @@ export default function AdminDashboard() {
 
   const fetchCuration = async () => {
     const items = await getCurationItems();
-    if (items.length === 0 && user && (isAdmin || user.email === 'hossainmehir2006@gmail.com')) {
+    if (items.length === 0 && user && (isAdmin || ['hossainmehir2006@gmail.com', 'onzu080@gmail.com'].includes(user.email || ''))) {
       const defaultBanners = [
         { imageUrl: 'https://images.unsplash.com/photo-1558961363-fa8fdf82db35?w=1920&q=80', title: "Onzu's Kitchen", subtitle: "Artisan Breads", order: 0 },
         { imageUrl: 'https://images.unsplash.com/photo-1578985545062-69928b1d9587?w=1920&q=80', title: "Sweet Delights", subtitle: "Custom Cakes", order: 1 }
@@ -114,7 +114,7 @@ export default function AdminDashboard() {
   };
 
   useEffect(() => {
-    if (user && (isAdmin || user.email === 'hossainmehir2006@gmail.com')) {
+    if (user && (isAdmin || ['hossainmehir2006@gmail.com', 'onzu080@gmail.com'].includes(user.email || ''))) {
       refreshData();
     }
   }, [user, isAdmin]);
@@ -558,7 +558,7 @@ export default function AdminDashboard() {
                                     order.status === 'ready' && 'bg-purple-50 text-purple-600 border-purple-100',
                                     order.status === 'delivered' && 'bg-green-50 text-green-600 border-green-100',
                                     order.status === 'cancelled' && 'bg-red-50 text-red-600 border-red-100'
-                                 )}>{order.status}</span>
+                                 )}>{order.status === 'preparing' ? 'Prepared' : order.status === 'cancelled' ? 'Canceled' : order.status}</span>
                               </div>
                            ))}
                         </div>
@@ -897,7 +897,7 @@ export default function AdminDashboard() {
                                      <span className="text-[10px] text-mocha/30 font-mono tracking-widest uppercase">#{order.id.slice(-8)}</span>
                                      <select 
                                         value={order.status}
-                                        onChange={(e) => handleUpdateOrderStatus(order.id, e.target.value)} // UPDATED
+                                        onChange={(e) => handleUpdateOrderStatus(order.id, e.target.value)}
                                         className={cn(
                                            "w-max px-4 py-2 rounded-xl text-[10px] font-bold uppercase tracking-widest border-0 outline-none cursor-pointer transition-all shadow-sm",
                                            order.status === 'pending' ? 'bg-orange-50 text-orange-600' : 
@@ -906,7 +906,7 @@ export default function AdminDashboard() {
                                            order.status === 'delivered' ? 'bg-green-50 text-green-600' : 'bg-red-50 text-red-600'
                                         )}
                                      >
-                                        <option value="pending">Pending</option> // UPDATED OPTIONS
+                                        <option value="pending">Pending</option>
                                         <option value="preparing">Prepared</option>
                                         <option value="ready">Ready</option>
                                         <option value="delivered">Delivered</option>

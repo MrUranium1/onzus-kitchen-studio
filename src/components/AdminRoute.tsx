@@ -18,8 +18,8 @@ export default function AdminRoute({ children }: AdminRouteProps) {
     );
   }
 
-  // Allow the specific admin email as a fallback if Firestore check is still propagating
-  const isAuthorized = isAdmin || user?.email === 'hossainmehir2006@gmail.com';
+  // Allow specific admin emails as a fallback if Firestore check is still propagating
+  const isAuthorized = isAdmin || ['hossainmehir2006@gmail.com', 'onzu080@gmail.com'].includes(user?.email || '');
 
   if (!user || !isAuthorized) {
     return <Navigate to="/admin" replace />;

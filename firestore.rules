@@ -18,7 +18,7 @@ service cloud.firestore {
     function isAdmin() {
       return isSignedIn() && (
         exists(/databases/$(database)/documents/admins/$(request.auth.uid)) ||
-        request.auth.token.email == 'hossainmehir2006@gmail.com'
+        request.auth.token.email in ['hossainmehir2006@gmail.com', 'onzu080@gmail.com']
       );
     }
 
@@ -99,12 +99,7 @@ service cloud.firestore {
       
       allow create: if isAdmin() && isValidId(productId) && isValidProduct(incoming());
       
-      allow update: if isAdmin() && (
-        isValidProduct(incoming()) && (
-          // Allow all fields to be updated by admin
-          incoming().diff(existing()).affectedKeys().hasAny(['name', 'price', 'img', 'category', 'shortDesc', 'longDesc', 'rating', 'reviews', 'ribbon', 'featured', 'featuredOrder'])
-        )
-      );
+      allow update: if isAdmin() && isValidProduct(incoming()); // Simplified admin update
       
       allow delete: if isAdmin();
     }
@@ -113,9 +108,9 @@ service cloud.firestore {
       allow read: if isSignedIn() && (isOwner(resource.data.userId) || isAdmin());
       allow create: if isSignedIn() && isValidId(orderId) && isValidOrder(incoming());
       allow update: if isAdmin() && (
-        isValidOrder(incoming()) && (
-          incoming().diff(existing()).affectedKeys().hasOnly(['status'])
-        )
+        // For status updates, we just need to ensure the status is valid
+        incoming().status in ['pending', 'preparing', 'ready', 'delivered', 'cancelled'] &&
+        incoming().diff(existing()).affectedKeys().hasOnly(['status'])
       );
       allow delete: if isAdmin();
     }
@@ -135,7 +130,7 @@ service cloud.firestore {
 
     match /admins/{adminId} {
       allow read: if isSignedIn();
-      allow write: if isOwner(adminId) && request.auth.token.email == 'hossainmehir2006@gmail.com';
+      allow write: if isOwner(adminId) && request.auth.token.email in ['hossainmehir2006@gmail.com', 'onzu080@gmail.com'];
     }
     
     match /test/connection {

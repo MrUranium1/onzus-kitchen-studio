@@ -52,7 +52,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
         // Check if user is admin
         const userEmail = firebaseUser.email?.toLowerCase() || '';
-        const isHardcodedAdmin = userEmail === 'hossainmehir2006@gmail.com';
+        const isHardcodedAdmin = ['hossainmehir2006@gmail.com', 'onzu080@gmail.com'].includes(userEmail);
         
         console.log(`User logged in: ${userEmail}, isHardcodedAdmin: ${isHardcodedAdmin}`);
         

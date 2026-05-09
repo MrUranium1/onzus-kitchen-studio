@@ -86,10 +86,10 @@ export default function MyOrders() {
                       order.status === 'preparing' ? 'bg-blue-50 text-blue-500 border border-blue-100' :
                       order.status === 'ready' ? 'bg-purple-50 text-purple-500 border border-purple-100' :
                       order.status === 'delivered' ? 'bg-green-50 text-green-500 border border-green-100' :
-                      'bg-gray-50 text-gray-500 border border-gray-100'
+                      'bg-red-50 text-red-500 border border-red-100'
                     )}>
                       {getStatusIcon(order.status)}
-                      {order.status}
+                      {order.status === 'preparing' ? 'Prepared' : order.status === 'cancelled' ? 'Canceled' : order.status}
                     </div>
                   </div>
 
