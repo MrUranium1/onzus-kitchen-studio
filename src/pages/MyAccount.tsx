@@ -16,12 +16,23 @@ import {
   Loader2,
   Camera,
   Save,
-  AlertCircle
+  AlertCircle,
+  MessageSquare,
+  MessageCircle,
+  Plus,
+  Trash2,
+  Edit2,
+  Briefcase,
+  Home as HomeIcon,
+  Map,
+  Check,
+  X
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useAuth } from '../context/AuthContext';
-import { getUserProfile, updateUserProfile, UserProfile } from '../services/userService';
+import { getUserProfile, updateUserProfile, UserProfile, getAddresses, addAddress, updateAddress, deleteAddress, SavedAddress } from '../services/userService';
 import { getOrdersByUser, Order } from '../services/orderService';
+import { getUserInquiries, Inquiry } from '../services/inquiryService';
 import { cn } from '../lib/utils';
 import { updateProfile, updatePassword, getAuth } from 'firebase/auth';
 
@@ -30,10 +41,21 @@ export default function MyAccount() {
   const navigate = useNavigate();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [orders, setOrders] = useState<Order[]>([]);
+  const [inquiries, setInquiries] = useState<Inquiry[]>([]);
+  const [addresses, setAddresses] = useState<SavedAddress[]>([]);
   const [isEditing, setIsEditing] = useState(false);
+  const [isAddressModalOpen, setIsAddressModalOpen] = useState(false);
+  const [editingAddress, setEditingAddress] = useState<SavedAddress | null>(null);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
   const [message, setMessage] = useState<{ text: string, type: 'success' | 'error' } | null>(null);
+
+  // Address Form State
+  const [addressLabel, setAddressLabel] = useState<'Home' | 'Work' | 'Other'>('Home');
+  const [addressFull, setAddressFull] = useState('');
+  const [addressPhone, setAddressPhone] = useState('');
+  const [addressLandmark, setAddressLandmark] = useState('');
+  const [addressIsDefault, setAddressIsDefault] = useState(false);
 
   // Form State
   const [name, setName] = useState('');
@@ -53,22 +75,27 @@ export default function MyAccount() {
     const fetchData = async () => {
       setLoading(true);
       try {
-        const [profileData, orderData] = await Promise.all([
+        const [profileData, orderData, inquiryData, addressData] = await Promise.all([
           getUserProfile(user.uid),
-          getOrdersByUser(user.uid)
+          getOrdersByUser(user.uid),
+          getUserInquiries(user.uid),
+          getAddresses(user.uid)
         ]);
         
         if (profileData) {
           setProfile(profileData);
-          setName(profileData.name || '');
+          setName(profileData.name || user.displayName || '');
           setPhone(profileData.phoneNumber || '');
           setAddress(profileData.address || '');
         } else {
           // Initialize profile if it doesn't exist
-          setName(user.name || '');
+          setName(user.displayName || '');
+          setPhone('');
         }
         
         setOrders(orderData);
+        setInquiries(inquiryData);
+        setAddresses(addressData);
       } catch (error) {
         console.error("Error fetching account data:", error);
       } finally {
@@ -100,7 +127,13 @@ export default function MyAccount() {
         address
       });
 
-      setProfile(prev => prev ? { ...prev, name, phoneNumber: phone, address } : null);
+      setProfile({
+        uid: user.uid,
+        email: user.email || '',
+        name,
+        phoneNumber: phone,
+        address
+      });
       setIsEditing(false);
       setMessage({ text: 'Profile updated successfully!', type: 'success' });
     } catch (error: any) {
@@ -140,6 +173,121 @@ export default function MyAccount() {
       case 'ready': return 'bg-blue-50 text-blue-600 border-blue-100';
       case 'cancelled': return 'bg-red-50 text-red-600 border-red-100';
       default: return 'bg-mocha/5 text-mocha/60 border-mocha/10';
+    }
+  };
+
+  const formatDate = (date: any) => {
+    if (!date) return '-';
+    if (date.seconds) return new Date(date.seconds * 1000).toLocaleDateString();
+    if (date instanceof Date) return date.toLocaleDateString();
+    return new Date(date).toLocaleDateString();
+  };
+
+  const handleOpenAddressModal = (addr: SavedAddress | null = null) => {
+    if (addr) {
+      setEditingAddress(addr);
+      setAddressLabel(addr.label);
+      setAddressFull(addr.fullAddress);
+      setAddressPhone(addr.phoneNumber);
+      setAddressLandmark(addr.landmark || '');
+      setAddressIsDefault(addr.isDefault);
+    } else {
+      setEditingAddress(null);
+      setAddressLabel('Home');
+      setAddressFull('');
+      setAddressPhone(phone); // Default to profile phone
+      setAddressLandmark('');
+      setAddressIsDefault(addresses.length === 0); // Default if first address
+    }
+    setIsAddressModalOpen(true);
+  };
+
+  const handleSaveAddress = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user) return;
+
+    setActionLoading(true);
+    setMessage(null);
+    try {
+      const addressData = {
+        label: addressLabel,
+        fullAddress: addressFull,
+        phoneNumber: addressPhone,
+        landmark: addressLandmark,
+        isDefault: addressIsDefault
+      };
+
+      if (editingAddress) {
+        await updateAddress(user.uid, editingAddress.id, addressData);
+      } else {
+        await addAddress(user.uid, addressData);
+      }
+
+      const updatedAddresses = await getAddresses(user.uid);
+      setAddresses(updatedAddresses);
+      setIsAddressModalOpen(false);
+      setMessage({ text: 'Address book updated!', type: 'success' });
+    } catch (error: any) {
+      console.error("Save address error:", error);
+      let errorText = 'Failed to save address.';
+      try {
+        const parsed = JSON.parse(error.message);
+        if (parsed.error) errorText = `Error: ${parsed.error}`;
+      } catch (e) {
+        if (error.message) errorText = error.message;
+      }
+      setMessage({ text: errorText, type: 'error' });
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+
+  const handleDeleteAddress = async (addressId: string) => {
+    if (!user) return;
+    
+    if (!addressId) {
+      console.error("No addressId provided to handleDeleteAddress");
+      return;
+    }
+
+    setDeletingId(addressId);
+    setMessage(null);
+    
+    try {
+      console.log(`Deleting address ${addressId} for user ${user.uid}`);
+      await deleteAddress(user.uid, addressId);
+      
+      setAddresses(prev => prev.filter(a => a.id !== addressId));
+      setMessage({ text: 'Address deleted successfully!', type: 'success' });
+      setConfirmDeleteId(null);
+    } catch (error: any) {
+      console.error("Delete address error:", error);
+      let errorText = 'Failed to delete address.';
+      
+      try {
+        const parsed = JSON.parse(error.message);
+        if (parsed.error) errorText = `Error: ${parsed.error}`;
+      } catch (e) {
+        errorText = error.message || 'Failed to delete address. Please try again.';
+      }
+      
+      setMessage({ text: errorText, type: 'error' });
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
+  const setAsDefault = async (addr: SavedAddress) => {
+    if (!user || addr.isDefault) return;
+    try {
+      await updateAddress(user.uid, addr.id, { isDefault: true });
+      const updated = await getAddresses(user.uid);
+      setAddresses(updated);
+    } catch (error) {
+      console.error("Error setting default address:", error);
     }
   };
 
@@ -193,10 +341,10 @@ export default function MyAccount() {
               <div className="relative mt-4 mb-6 inline-block">
                 <div className="w-24 h-24 rounded-full bg-cream border-4 border-white shadow-lg overflow-hidden flex items-center justify-center mx-auto">
                   {user?.photoURL ? (
-                    <img src={user.photoURL} alt={user.name} className="w-full h-full object-cover" />
+                    <img src={user.photoURL} alt={user.displayName || 'User'} className="w-full h-full object-cover" />
                   ) : (
                     <span className="text-3xl font-display text-caramel font-bold">
-                      {user?.name.charAt(0).toUpperCase()}
+                      {(user?.displayName || 'U').charAt(0).toUpperCase()}
                     </span>
                   )}
                 </div>
@@ -205,7 +353,14 @@ export default function MyAccount() {
                 </button>
               </div>
 
-              <h2 className="font-display text-2xl text-espresso mb-1">{profile?.name || user?.name}</h2>
+              {(!profile?.name || !profile?.phoneNumber) && !loading && (
+                <div className="mb-6 bg-amber-50 border border-amber-200 rounded-2xl p-3 flex items-center gap-2 text-amber-700 text-[10px] font-bold uppercase tracking-widest justify-center">
+                  <AlertCircle className="w-3 h-3" />
+                  Complete your profile
+                </div>
+              )}
+
+              <h2 className="font-display text-2xl text-espresso mb-1">{profile?.name || user?.displayName || 'Artisan Baker'}</h2>
               <p className="text-mocha/50 font-body text-sm mb-6 pb-6 border-b border-biscuit/50">{user?.email}</p>
 
               <div className="space-y-4 text-left">
@@ -215,7 +370,7 @@ export default function MyAccount() {
                   </div>
                   <div>
                     <p className="text-[10px] uppercase font-bold tracking-widest text-mocha/30">Phone</p>
-                    <p className="text-mocha/80">{profile?.phoneNumber || 'Not provided'}</p>
+                    <p className="text-mocha/80">{profile?.phoneNumber || phone || 'Not provided'}</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-3 text-sm font-body">
@@ -262,15 +417,21 @@ export default function MyAccount() {
                 <ChevronRight className={cn("w-4 h-4 text-mocha/20 group-hover:text-mocha transition-all", showPasswordChange && "rotate-90")} />
               </button>
 
-              <Link to="/account" className="flex items-center justify-between p-3 rounded-2xl hover:bg-cream transition-colors group opacity-60">
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-xl bg-mocha/5 flex items-center justify-center text-mocha/40 group-hover:text-rust transition-colors">
-                    <MapPin className="w-4 h-4" />
+                <button 
+                  onClick={() => {
+                    const el = document.getElementById('address-book');
+                    el?.scrollIntoView({ behavior: 'smooth' });
+                  }}
+                  className="w-full flex items-center justify-between p-3 rounded-2xl hover:bg-cream transition-colors group"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-xl bg-mocha/5 flex items-center justify-center text-mocha/40 group-hover:text-rust transition-colors">
+                      <MapPin className="w-4 h-4" />
+                    </div>
+                    <span className="font-body text-sm text-mocha/80 group-hover:text-mocha font-bold">Address Book</span>
                   </div>
-                  <span className="font-body text-sm text-mocha/80 group-hover:text-mocha font-bold">Address Book</span>
-                </div>
-                <span className="text-[10px] font-bold text-mocha/30 uppercase tracking-widest mr-2">Coming Soon</span>
-              </Link>
+                  <ChevronRight className="w-4 h-4 text-mocha/20 group-hover:text-mocha group-hover:translate-x-1 transition-all" />
+                </button>
 
               <AnimatePresence>
                 {showPasswordChange && (
@@ -370,6 +531,177 @@ export default function MyAccount() {
                 )}
               </div>
             </section>
+
+            {/* Address Book Section */}
+            <section id="address-book" className="bg-white rounded-[2.5rem] shadow-xl border border-biscuit overflow-hidden">
+              <div className="px-8 py-6 border-b border-biscuit flex items-center justify-between bg-white">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-2xl bg-caramel/10 flex items-center justify-center text-caramel">
+                    <MapPin className="w-5 h-5" />
+                  </div>
+                  <h3 className="font-display text-2xl text-espresso">Address Book</h3>
+                </div>
+                <button 
+                  onClick={() => handleOpenAddressModal()}
+                  className="bg-espresso text-cream px-5 py-2.5 rounded-full font-bold text-[10px] uppercase tracking-widest flex items-center gap-2 hover:bg-mocha transition-colors"
+                >
+                  <Plus className="w-4 h-4" /> Add New
+                </button>
+              </div>
+
+              <div className="p-8">
+                {addresses.length === 0 ? (
+                  <div className="text-center py-10 opacity-40">
+                    <Map className="w-12 h-12 mx-auto mb-4" />
+                    <p className="font-body text-sm">Your address book is empty.</p>
+                  </div>
+                ) : (
+                  <div className="grid sm:grid-cols-2 gap-4">
+                    {addresses.map((addr) => (
+                      <div 
+                        key={addr.id} 
+                        className={cn(
+                          "relative group p-6 rounded-3xl border-2 transition-all duration-300",
+                          addr.isDefault 
+                            ? "bg-caramel/5 border-caramel shadow-md" 
+                            : "bg-white border-biscuit/40 hover:border-caramel/30"
+                        )}
+                      >
+                        <div className="flex items-center justify-between mb-4">
+                          <div className="flex items-center gap-2">
+                            <div className="w-8 h-8 rounded-xl bg-white border border-biscuit/40 flex items-center justify-center text-mocha/60">
+                              {addr.label === 'Home' ? <HomeIcon className="w-4 h-4" /> : 
+                               addr.label === 'Work' ? <Briefcase className="w-4 h-4" /> : <Map className="w-4 h-4" />}
+                            </div>
+                            <span className="font-display text-lg text-espresso">{addr.label}</span>
+                          </div>
+                          {addr.isDefault && (
+                            <span className="bg-caramel text-white text-[9px] font-black px-2 py-0.5 rounded-full uppercase tracking-tighter">Default</span>
+                          )}
+                        </div>
+                        <p className="text-sm font-body text-mocha/80 mb-3 leading-relaxed min-h-[40px]">{addr.fullAddress}</p>
+                        <div className="flex items-center gap-2 text-xs font-body text-mocha/50 mb-6">
+                          <Phone className="w-3 h-3" /> {addr.phoneNumber}
+                        </div>
+                        
+                          <div className="flex items-center gap-3 pt-4 border-t border-biscuit/20">
+                            <button 
+                              type="button"
+                              onClick={() => handleOpenAddressModal(addr)}
+                              className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-caramel hover:bg-caramel/10 text-[10px] font-bold uppercase transition-colors"
+                            >
+                              <Edit2 className="w-3 h-3" /> Edit
+                            </button>
+                            
+                            {confirmDeleteId === addr.id ? (
+                              <div className="flex items-center gap-2">
+                                <button 
+                                  type="button"
+                                  onClick={() => setConfirmDeleteId(null)}
+                                  className="px-3 py-1.5 rounded-lg text-[9px] font-bold uppercase text-mocha/40 hover:bg-mocha/5"
+                                >
+                                  Cancel
+                                </button>
+                                <button 
+                                  type="button"
+                                  disabled={deletingId === addr.id}
+                                  onClick={() => handleDeleteAddress(addr.id)}
+                                  className="px-4 py-1.5 rounded-lg text-[9px] font-bold uppercase bg-rust text-white hover:bg-red-700 shadow-sm disabled:opacity-50"
+                                >
+                                  {deletingId === addr.id ? <Loader2 className="w-3 h-3 animate-spin" /> : 'Confirm'}
+                                </button>
+                              </div>
+                            ) : (
+                              <button 
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setConfirmDeleteId(addr.id);
+                                }}
+                                className="p-3 rounded-xl text-rust hover:bg-red-50 transition-colors relative z-10"
+                                aria-label="Delete address"
+                              >
+                                <Trash2 className="w-5 h-5" />
+                              </button>
+                            )}
+                          </div>
+
+                        {!addr.isDefault && (
+                          <button 
+                            onClick={() => setAsDefault(addr)}
+                            className="absolute -top-2 -right-2 w-8 h-8 rounded-full bg-white border border-biscuit/40 flex items-center justify-center text-mocha/20 hover:text-caramel hover:border-caramel opacity-0 group-hover:opacity-100 transition-all shadow-sm"
+                            title="Set as Default"
+                          >
+                            <Check className="w-4 h-4" />
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </section>
+
+            {/* My Messages / Replies Section */}
+            <section className="bg-white rounded-[2.5rem] shadow-xl border border-biscuit overflow-hidden">
+              <div className="px-8 py-6 border-b border-biscuit flex items-center justify-between bg-white">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-2xl bg-mocha/10 flex items-center justify-center text-mocha">
+                    <MessageSquare className="w-5 h-5" />
+                  </div>
+                  <h3 className="font-display text-2xl text-espresso">My Messages</h3>
+                </div>
+                <Link to="/contact" className="text-[10px] font-bold text-caramel uppercase tracking-widest hover:text-rust flex items-center gap-1.5 transition-colors">
+                  Send New <Plus className="w-4 h-4" />
+                </Link>
+              </div>
+
+              <div className="divide-y divide-biscuit/40 max-h-[600px] overflow-y-auto">
+                {inquiries.length > 0 ? (
+                  inquiries.map((inq) => (
+                    <div key={inq.id} className="p-8 hover:bg-cream/20 transition-colors">
+                      <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
+                        <div>
+                          <p className="text-[10px] font-bold text-mocha/30 uppercase tracking-widest mb-1">{formatDate(inq.createdAt)}</p>
+                          <h4 className="font-display text-lg text-espresso">{inq.subject}</h4>
+                        </div>
+                        <span className={cn(
+                          "px-4 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest border",
+                          inq.status === 'replied' ? "bg-green-50 text-green-600 border-green-100" : "bg-amber-50 text-amber-600 border-amber-100"
+                        )}>
+                          {inq.status === 'replied' ? 'Replied' : 'Pending'}
+                        </span>
+                      </div>
+                      
+                      <div className="space-y-4">
+                        <div className="bg-cream/40 p-5 rounded-2xl border border-biscuit/40">
+                          <p className="text-sm text-mocha/70 font-body leading-relaxed">{inq.message}</p>
+                        </div>
+
+                        {inq.adminReply && (
+                          <div className="bg-caramel/5 p-5 rounded-2xl border border-caramel/20 ml-6 relative">
+                            <div className="absolute -left-2.5 top-5 w-2.5 h-2.5 bg-caramel/5 border-l border-t border-caramel/20 rotate-45" />
+                            <p className="text-[10px] font-bold text-caramel uppercase tracking-widest mb-2 flex items-center gap-2">
+                              <MessageCircle className="w-3 h-3" /> Admin Reply:
+                            </p>
+                            <p className="text-sm text-espresso font-medium font-body leading-relaxed">{inq.adminReply}</p>
+                            <p className="text-[10px] text-mocha/30 mt-3 text-right">Replied on {formatDate(inq.repliedAt)}</p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="p-20 text-center">
+                    <div className="w-16 h-16 bg-cream rounded-full flex items-center justify-center mx-auto mb-4">
+                      <MessageSquare className="w-8 h-8 text-mocha/10" />
+                    </div>
+                    <p className="font-display text-xl text-mocha/40 mb-2">No messages yet</p>
+                    <p className="font-body text-sm text-mocha/30">Need help or a custom cake? Just ask!</p>
+                  </div>
+                )}
+              </div>
+            </section>
           </div>
         </div>
       </div>
@@ -398,11 +730,25 @@ export default function MyAccount() {
                   onClick={() => setIsEditing(false)}
                   className="absolute top-8 right-10 text-cream/50 hover:text-cream transition-colors"
                 >
-                  <AlertCircle className="w-6 h-6 rotate-45" />
+                  <X className="w-6 h-6" />
                 </button>
               </div>
 
               <form onSubmit={handleUpdateProfile} className="p-10 space-y-6">
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-bold text-mocha/40 uppercase tracking-widest pl-1">Email Address (Non-editable)</label>
+                  <div className="relative">
+                    <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-biscuit" />
+                    <input 
+                      type="email" 
+                      readOnly
+                      disabled
+                      className="w-full bg-cream/10 border-2 border-biscuit rounded-2xl pl-11 pr-4 py-3.5 text-sm outline-none text-mocha/50 cursor-not-allowed" 
+                      value={user?.email || ''}
+                    />
+                  </div>
+                </div>
+
                 <div className="space-y-1.5">
                   <label className="text-[10px] font-bold text-mocha/40 uppercase tracking-widest pl-1">Full Name *</label>
                   <div className="relative">
@@ -432,7 +778,7 @@ export default function MyAccount() {
                 </div>
 
                 <div className="space-y-1.5">
-                  <label className="text-[10px] font-bold text-mocha/40 uppercase tracking-widest pl-1">Default Delivery Address</label>
+                  <label className="text-[10px] font-bold text-mocha/40 uppercase tracking-widest pl-1">Quick Default Address</label>
                   <div className="relative">
                     <MapPin className="absolute left-4 top-4 w-4 h-4 text-biscuit" />
                     <textarea 
@@ -460,6 +806,142 @@ export default function MyAccount() {
                   >
                     {actionLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
                     Save Changes
+                  </button>
+                </div>
+              </form>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Address Book Modal */}
+      <AnimatePresence>
+        {isAddressModalOpen && (
+          <div className="fixed inset-0 z-[500] flex items-center justify-center p-4">
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+              onClick={() => !actionLoading && setIsAddressModalOpen(false)}
+            />
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 20 }}
+              className="relative w-full max-w-lg bg-cream rounded-[2.5rem] shadow-2xl overflow-hidden"
+            >
+              <div className="px-10 py-8 bg-hero-bg text-cream relative">
+                <h2 className="font-display text-3xl">{editingAddress ? 'Edit Address' : 'New Address'}</h2>
+                <p className="text-biscuit/70 text-sm font-body">Where should we deliver your treats?</p>
+                <button 
+                  onClick={() => setIsAddressModalOpen(false)}
+                  className="absolute top-8 right-10 text-cream/50 hover:text-cream transition-colors"
+                >
+                  <X className="w-6 h-6" />
+                </button>
+              </div>
+
+              <form onSubmit={handleSaveAddress} className="p-10 space-y-6">
+                <div className="space-y-3">
+                  <label className="text-[10px] font-bold text-mocha/40 uppercase tracking-widest pl-1">Label</label>
+                  <div className="flex gap-2">
+                    {(['Home', 'Work', 'Other'] as const).map((l) => (
+                      <button
+                        key={l}
+                        type="button"
+                        onClick={() => setAddressLabel(l)}
+                        className={cn(
+                          "flex-1 py-3 rounded-2xl border-2 font-bold text-xs transition-all",
+                          addressLabel === l 
+                            ? "bg-caramel border-caramel text-white shadow-md shadow-caramel/20" 
+                            : "bg-white border-biscuit text-mocha/40 hover:border-biscuit/60"
+                        )}
+                      >
+                        {l}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-bold text-mocha/40 uppercase tracking-widest pl-1">Full Address *</label>
+                  <div className="relative">
+                    <MapPin className="absolute left-4 top-4 w-4 h-4 text-biscuit" />
+                    <textarea 
+                      required
+                      rows={3}
+                      className="w-full bg-white border-2 border-biscuit rounded-2xl pl-11 pr-4 py-3.5 text-sm outline-none focus:border-caramel transition-colors resize-none"
+                      placeholder="House/Flat No, Street, Area, City..."
+                      value={addressFull}
+                      onChange={(e) => setAddressFull(e.target.value)}
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-bold text-mocha/40 uppercase tracking-widest pl-1">Phone Number *</label>
+                    <div className="relative">
+                      <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-biscuit" />
+                      <input 
+                        type="tel" 
+                        required
+                        className="w-full bg-white border-2 border-biscuit rounded-2xl pl-11 pr-4 py-3.5 text-sm outline-none focus:border-caramel transition-colors"
+                        placeholder="+880 1XXX..."
+                        value={addressPhone}
+                        onChange={(e) => setAddressPhone(e.target.value)}
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-bold text-mocha/40 uppercase tracking-widest pl-1">Landmark</label>
+                    <div className="relative">
+                      <Map className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-biscuit" />
+                      <input 
+                        type="text" 
+                        className="w-full bg-white border-2 border-biscuit rounded-2xl pl-11 pr-4 py-3.5 text-sm outline-none focus:border-caramel transition-colors"
+                        placeholder="Near XYZ School"
+                        value={addressLandmark}
+                        onChange={(e) => setAddressLandmark(e.target.value)}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <label className="flex items-center gap-3 cursor-pointer group">
+                  <div className="relative">
+                    <input 
+                      type="checkbox" 
+                      className="sr-only" 
+                      checked={addressIsDefault}
+                      onChange={(e) => setAddressIsDefault(e.target.checked)}
+                    />
+                    <div className={cn(
+                      "w-6 h-6 rounded-lg border-2 transition-all flex items-center justify-center",
+                      addressIsDefault ? "bg-caramel border-caramel" : "bg-white border-biscuit group-hover:border-caramel/50"
+                    )}>
+                      {addressIsDefault && <Check className="w-4 h-4 text-white" />}
+                    </div>
+                  </div>
+                  <span className="text-xs font-bold text-mocha/60 uppercase tracking-widest">Set as default address</span>
+                </label>
+
+                <div className="flex gap-4 pt-4">
+                  <button 
+                    type="button"
+                    onClick={() => setIsAddressModalOpen(false)}
+                    className="flex-1 px-8 py-4 rounded-2xl border-2 border-biscuit text-mocha font-bold hover:bg-white transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button 
+                    disabled={actionLoading}
+                    type="submit"
+                    className="flex-1 bg-espresso hover:bg-mocha text-cream font-bold px-8 py-4 rounded-2xl transition-all shadow-lg active:scale-95 flex items-center justify-center gap-2 disabled:opacity-50"
+                  >
+                    {actionLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                    Save Address
                   </button>
                 </div>
               </form>

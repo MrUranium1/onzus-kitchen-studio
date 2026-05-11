@@ -25,7 +25,7 @@ interface AuthContextType {
   isAdmin: boolean;
   loginWithGoogle: () => Promise<void>;
   loginWithEmail: (email: string, pass: string) => Promise<void>;
-  signUpWithEmail: (email: string, pass: string, name: string) => Promise<void>;
+  signUpWithEmail: (email: string, pass: string, name: string, phone: string) => Promise<void>;
   logout: () => Promise<void>;
   isAuthModalOpen: boolean;
   openAuthModal: () => void;
@@ -125,7 +125,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const signUpWithEmail = async (email: string, pass: string, name: string) => {
+  const signUpWithEmail = async (email: string, pass: string, name: string, phone: string) => {
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, email, pass);
       await updateProfile(userCredential.user, {
@@ -136,7 +136,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       await createUserProfile({
         uid: userCredential.user.uid,
         name: name,
-        email: email
+        email: email,
+        phoneNumber: phone
       });
 
       // Force user update in state

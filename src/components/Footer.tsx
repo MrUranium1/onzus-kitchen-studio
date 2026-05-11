@@ -30,7 +30,7 @@ export default function Footer() {
               <a href="https://www.facebook.com/onzuskitchen" target="_blank" rel="noreferrer" className="w-9 h-9 bg-mocha hover:bg-caramel rounded-xl flex items-center justify-center transition-colors">
                 <Facebook className="w-4 h-4" />
               </a>
-              <a href="#" className="w-9 h-9 bg-mocha hover:bg-caramel rounded-xl flex items-center justify-center transition-colors">
+              <a href="https://www.instagram.com/onzus_kitchen/" target="_blank" rel="noreferrer" className="w-9 h-9 bg-mocha hover:bg-caramel rounded-xl flex items-center justify-center transition-colors">
                 <Instagram className="w-4 h-4" />
               </a>
               <a href="https://wa.me/8801719262956" className="w-9 h-9 bg-mocha hover:bg-green-500 rounded-xl flex items-center justify-center transition-colors">
@@ -66,7 +66,7 @@ export default function Footer() {
               </li>
               <li className="flex items-center gap-2">
                 <Mail className="w-4 h-4 shrink-0" />
-                <a href="mailto:hello@onzuskitchen.com" className="hover:text-honey transition-colors">hello@onzuskitchen.com</a>
+                <a href="mailto:onzu080@gmail.com" className="hover:text-honey transition-colors">onzu080@gmail.com</a>
               </li>
               <li className="flex items-center gap-2">
                 <Clock className="w-4 h-4 shrink-0" />

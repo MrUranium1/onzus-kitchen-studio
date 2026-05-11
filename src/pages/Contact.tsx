@@ -1,15 +1,74 @@
-import React, { useState } from 'react';
-import { Send, MapPin, Phone, Mail, Clock, Facebook, Instagram, MessageCircle, ChevronDown, ChevronUp } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Send, MapPin, Phone, Mail, Clock, Facebook, Instagram, MessageCircle, ChevronDown, ChevronUp, Loader2, LogIn } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '../lib/utils';
+import { useAuth } from '../context/AuthContext';
+import { createInquiry } from '../services/inquiryService';
+import { getUserProfile } from '../services/userService';
 
 export default function Contact() {
-  const [formState, setFormState] = useState<'idle' | 'success'>('idle');
+  const { user } = useAuth();
+  const [formState, setFormState] = useState<'idle' | 'submitting' | 'success'>('idle');
   const [openFaq, setOpenFaq] = useState<number | null>(null);
+  const [loadingProfile, setLoadingProfile] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const [formData, setFormData] = useState({
+    name: '',
+    email: '',
+    phone: '',
+    subject: '',
+    message: ''
+  });
+
+  useEffect(() => {
+    if (user) {
+      setFormData(prev => ({
+        ...prev,
+        name: user.displayName || '',
+        email: user.email || ''
+      }));
+
+      const loadProfile = async () => {
+        setLoadingProfile(true);
+        const profile = await getUserProfile(user.uid);
+        if (profile) {
+          setFormData(prev => ({
+            ...prev,
+            name: profile.name || prev.name,
+            phone: profile.phoneNumber || prev.phone
+          }));
+        }
+        setLoadingProfile(false);
+      };
+      loadProfile();
+    }
+  }, [user]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setFormState('success');
+    if (!user) return;
+    setFormState('submitting');
+    
+    try {
+      await createInquiry({
+        userId: user.uid,
+        name: formData.name,
+        email: formData.email,
+        phone: formData.phone,
+        subject: formData.subject,
+        message: formData.message
+      });
+      setFormState('success');
+    } catch (error) {
+      console.error('Error submitting inquiry:', error);
+      alert('Failed to send message. Please try again or contact us via WhatsApp.');
+      setFormState('idle');
+    }
+  };
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+    setFormData(prev => ({ ...prev, [e.target.name]: e.target.value }));
   };
 
   const faqs = [
@@ -43,7 +102,7 @@ export default function Contact() {
               secondary="Fastest way to order!"
             />
             <ContactInfoCard icon={<Phone className="text-rust" />} title="Phone" link="tel:+8801719262956" content="+880 1719-262956" />
-            <ContactInfoCard icon={<Mail className="text-caramel" />} title="Email" link="mailto:hello@onzuskitchen.com" content="hello@onzuskitchen.com" />
+            <ContactInfoCard icon={<Mail className="text-caramel" />} title="Email" link="mailto:onzu080@gmail.com" content="onzu080@gmail.com" />
             
             <div className="testi-card rounded-3xl p-6">
               <div className="flex items-center gap-4">
@@ -65,7 +124,7 @@ export default function Contact() {
               <a href="https://www.facebook.com/onzuskitchen" target="_blank" rel="noreferrer" className="flex-1 bg-[#1877F2] hover:opacity-90 text-white rounded-2xl py-3 text-center text-xs font-bold font-body transition-all flex items-center justify-center gap-2">
                 <Facebook className="w-4 h-4" /> Facebook
               </a>
-              <a href="#" className="flex-1 bg-gradient-to-br from-[#833AB4] via-[#FD1D1D] to-[#FCB045] hover:opacity-90 text-white rounded-2xl py-3 text-center text-xs font-bold font-body transition-all flex items-center justify-center gap-2">
+              <a href="https://www.instagram.com/onzus_kitchen/" target="_blank" rel="noreferrer" className="flex-1 bg-gradient-to-br from-[#833AB4] via-[#FD1D1D] to-[#FCB045] hover:opacity-90 text-white rounded-2xl py-3 text-center text-xs font-bold font-body transition-all flex items-center justify-center gap-2">
                 <Instagram className="w-4 h-4" /> Instagram
               </a>
             </div>
@@ -75,48 +134,126 @@ export default function Contact() {
         {/* Form Column */}
         <div className="md:col-span-3">
           <div className="bg-white/80 backdrop-blur rounded-3xl shadow-xl p-8 border border-biscuit h-full">
-            <AnimatePresence mode="wait">
-              {formState === 'idle' ? (
-                <motion.div
-                  key="form"
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -10 }}
+            {!user ? (
+              <div className="flex flex-col items-center justify-center text-center h-full py-10 space-y-6">
+                <div className="w-20 h-20 bg-cream rounded-full flex items-center justify-center shadow-inner">
+                  <LogIn className="w-10 h-10 text-caramel opacity-40" />
+                </div>
+                <div>
+                  <h2 className="font-display text-2xl text-espresso mb-2">Please login to send an inquiry</h2>
+                  <p className="text-mocha/60 font-body text-sm max-w-xs mx-auto">Please sign in to your account to send us an inquiry or ask about an order.</p>
+                </div>
+                <Link 
+                  to="/account" 
+                  className="bg-espresso text-cream px-10 py-4 rounded-full font-body font-bold text-sm hover:bg-mocha transition-all active:scale-95 shadow-lg flex items-center gap-2"
                 >
-                  <h2 className="font-display text-3xl text-espresso mb-2">Send a Message</h2>
-                  <p className="text-mocha/60 font-body text-sm mb-7">For custom cakes, bulk orders, or any enquiry — we reply within 2 hours.</p>
+                  <LogIn className="w-4 h-4" /> Go to Login
+                </Link>
+                <div className="flex items-center gap-2 text-mocha/40 text-xs">
+                  <div className="w-8 border-t border-biscuit"></div>
+                  <span>or</span>
+                  <div className="w-8 border-t border-biscuit"></div>
+                </div>
+                <a href="https://wa.me/8801719262956" target="_blank" rel="noreferrer" className="text-green-600 font-bold hover:underline flex items-center gap-1.5">
+                  <MessageCircle className="w-4 h-4" /> WhatsApp Us Directly
+                </a>
+              </div>
+            ) : (
+              <AnimatePresence mode="wait">
+                {formState === 'idle' ? (
+                  <motion.div
+                    key="form"
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                  >
+                    <div className="flex justify-between items-start mb-2">
+                       <h2 className="font-display text-3xl text-espresso">Send a Message</h2>
+                       {loadingProfile && <Loader2 className="w-4 h-4 animate-spin text-caramel" />}
+                    </div>
+                    <p className="text-mocha/60 font-body text-sm mb-7">For custom cakes, bulk orders, or any enquiry — we reply within 2 hours.</p>
 
-                  <form onSubmit={handleSubmit} className="space-y-5 text-sm">
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                    <form onSubmit={handleSubmit} className="space-y-5 text-sm">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                       <div className="space-y-1.5">
                         <label className="block text-[10px] font-bold text-mocha uppercase tracking-widest pl-1">Your Name *</label>
-                        <input type="text" className="w-full bg-cream/30 border-2 border-biscuit rounded-2xl px-5 py-3.5 outline-none focus:border-caramel transition-all" placeholder="e.g. Fatima Rahman" required/>
+                        <input 
+                          type="text" 
+                          name="name"
+                          value={formData.name}
+                          onChange={handleChange}
+                          className="w-full bg-cream/30 border-2 border-biscuit rounded-2xl px-5 py-3.5 outline-none focus:border-caramel transition-all" 
+                          placeholder="e.g. Fatima Rahman" 
+                          required
+                        />
                       </div>
                       <div className="space-y-1.5">
-                        <label className="block text-[10px] font-bold text-mocha uppercase tracking-widest pl-1">Phone Number *</label>
-                        <input type="tel" className="w-full bg-cream/30 border-2 border-biscuit rounded-2xl px-5 py-3.5 outline-none focus:border-caramel transition-all" placeholder="+880 1XXX-XXXXXX" required/>
+                        <label className="block text-[10px] font-bold text-mocha uppercase tracking-widest pl-1">Phone Number (Read-only)</label>
+                        <input 
+                          type="tel" 
+                          name="phone"
+                          value={formData.phone}
+                          readOnly
+                          className="w-full bg-cream/10 border-2 border-biscuit rounded-2xl px-5 py-3.5 outline-none text-mocha/50 cursor-not-allowed" 
+                          placeholder="+880 1XXX-XXXXXX" 
+                          required
+                        />
                       </div>
                     </div>
                     <div className="space-y-1.5">
-                      <label className="block text-[10px] font-bold text-mocha uppercase tracking-widest pl-1">Email Address</label>
-                      <input type="email" className="w-full bg-cream/30 border-2 border-biscuit rounded-2xl px-5 py-3.5 outline-none focus:border-caramel transition-all" placeholder="your@email.com"/>
+                      <label className="block text-[10px] font-bold text-mocha uppercase tracking-widest pl-1">Email Address (Read-only)</label>
+                      <input 
+                        type="email" 
+                        name="email"
+                        value={formData.email}
+                        readOnly
+                        className="w-full bg-cream/10 border-2 border-biscuit rounded-2xl px-5 py-3.5 outline-none text-mocha/50 cursor-not-allowed" 
+                        placeholder="your@email.com"
+                        required
+                      />
                     </div>
                     <div className="space-y-1.5">
                       <label className="block text-[10px] font-bold text-mocha uppercase tracking-widest pl-1">Subject *</label>
-                      <select className="w-full bg-cream/30 border-2 border-biscuit rounded-2xl px-5 py-3.5 outline-none focus:border-caramel transition-all appearance-none cursor-pointer">
+                      <select 
+                        name="subject"
+                        value={formData.subject}
+                        onChange={handleChange}
+                        className="w-full bg-cream/30 border-2 border-biscuit rounded-2xl px-5 py-3.5 outline-none focus:border-caramel transition-all appearance-none cursor-pointer"
+                        required
+                      >
                         <option value="">— Select a subject —</option>
-                        <option>Custom Cake Order</option>
-                        <option>Bulk / Corporate Order</option>
-                        <option>Wedding / Event Order</option>
-                        <option>General Enquiry</option>
+                        <option value="Custom Cake Order">Custom Cake Order</option>
+                        <option value="Bulk / Corporate Order">Bulk / Corporate Order</option>
+                        <option value="Wedding / Event Order">Wedding / Event Order</option>
+                        <option value="General Enquiry">General Enquiry</option>
                       </select>
                     </div>
                     <div className="space-y-1.5">
                       <label className="block text-[10px] font-bold text-mocha uppercase tracking-widest pl-1">Your Message *</label>
-                      <textarea rows={4} className="w-full bg-cream/30 border-2 border-biscuit rounded-2xl px-5 py-3.5 outline-none focus:border-caramel transition-all resize-none" placeholder="Tell us what you'd like to order, any special requirements, delivery address, etc."></textarea>
+                      <textarea 
+                        name="message"
+                        value={formData.message}
+                        onChange={handleChange}
+                        rows={4} 
+                        className="w-full bg-cream/30 border-2 border-biscuit rounded-2xl px-5 py-3.5 outline-none focus:border-caramel transition-all resize-none" 
+                        placeholder="Tell us what you'd like to order, any special requirements, delivery address, etc." 
+                        required
+                      ></textarea>
                     </div>
-                    <button type="submit" className="w-full bg-espresso hover:bg-mocha text-cream font-bold py-4 rounded-2xl transition-all shadow-lg active:scale-95 flex items-center justify-center gap-2">
-                      <Send className="w-4 h-4" /> Send Message
+                    <button 
+                      type="submit" 
+                      disabled={formState === 'submitting'}
+                      className="w-full bg-espresso hover:bg-mocha text-cream font-bold py-4 rounded-2xl transition-all shadow-lg active:scale-95 disabled:opacity-70 disabled:scale-100 flex items-center justify-center gap-2"
+                    >
+                      {formState === 'submitting' ? (
+                        <>
+                          <Loader2 className="w-4 h-4 animate-spin" /> Sending...
+                        </>
+                      ) : (
+                        <>
+                          <Send className="w-4 h-4" /> Send Message
+                        </>
+                      )}
                     </button>
                     
                     <div className="relative py-2">
@@ -148,6 +285,7 @@ export default function Contact() {
                 </motion.div>
               )}
             </AnimatePresence>
+            )}
           </div>
         </div>
       </section>

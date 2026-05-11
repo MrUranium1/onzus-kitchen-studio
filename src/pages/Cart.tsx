@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
 import { createOrder } from '../services/orderService';
-import { Trash2, Plus, Minus, ShoppingBag, CreditCard, ShieldCheck, Sparkles, MessageCircle, X, MapPin, Loader2 } from 'lucide-react';
+import { getUserProfile, getAddresses, SavedAddress, addAddress } from '../services/userService';
+import { Trash2, Plus, Minus, ShoppingBag, CreditCard, ShieldCheck, Sparkles, MessageCircle, X, MapPin, Loader2, Check, Home, Briefcase, Map } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '../lib/utils';
 
@@ -14,6 +15,10 @@ export default function Cart() {
   const [location, setLocation] = useState('');
   const [phoneNumber, setPhoneNumber] = useState('');
   const [guestEmail, setGuestEmail] = useState('');
+  const [addresses, setAddresses] = useState<SavedAddress[]>([]);
+  const [selectedAddressId, setSelectedAddressId] = useState<string | null>(null);
+  const [saveToAddressBook, setSaveToAddressBook] = useState(false);
+  const [addressLabel, setAddressLabel] = useState<'Home' | 'Work' | 'Other'>('Home');
   const [activeDiscount, setActiveDiscount] = useState<{ code: string, pct: number } | null>(null);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [isPlacingOrder, setIsPlacingOrder] = useState(false);
@@ -22,6 +27,46 @@ export default function Cart() {
   const [showClearConfirm, setShowClearConfirm] = useState(false);
 
   const subtotal = getCartTotal();
+
+  useEffect(() => {
+    if (user) {
+      const loadProfileAndAddresses = async () => {
+        const [profile, addrList] = await Promise.all([
+          getUserProfile(user.uid),
+          getAddresses(user.uid)
+        ]);
+
+        setAddresses(addrList);
+        
+        // Find default or first address if available
+        const defaultAddr = addrList.find(a => a.isDefault) || addrList[0];
+        if (defaultAddr) {
+          setSelectedAddressId(defaultAddr.id);
+          setLocation(defaultAddr.fullAddress);
+          setPhoneNumber(defaultAddr.phoneNumber);
+        } else if (profile) {
+          if (profile.phoneNumber && !phoneNumber) {
+            setPhoneNumber(profile.phoneNumber);
+          }
+          if (profile.address && !location) {
+            setLocation(profile.address);
+          }
+        }
+      };
+      loadProfileAndAddresses();
+    }
+  }, [user]);
+
+  const handleSelectAddress = (addr: SavedAddress) => {
+    setSelectedAddressId(addr.id);
+    setLocation(addr.fullAddress);
+    setPhoneNumber(addr.phoneNumber);
+  };
+
+  const handleManualEntry = () => {
+    setSelectedAddressId(null);
+  };
+
   const discountAmt = activeDiscount ? Math.round(subtotal * activeDiscount.pct / 100) : 0;
   const deliveryFee = subtotal - discountAmt >= 1000 ? 0 : 80;
   const total = subtotal - discountAmt + deliveryFee;
@@ -56,6 +101,16 @@ export default function Cart() {
 
     setIsPlacingOrder(true);
     try {
+      // Save to address book if requested
+      if (user && saveToAddressBook && !selectedAddressId) {
+        await addAddress(user.uid, {
+          label: addressLabel,
+          fullAddress: location,
+          phoneNumber: phoneNumber,
+          isDefault: addresses.length === 0
+        });
+      }
+
       const orderId = await createOrder({
         userId: user?.uid || 'guest',
         userEmail: user?.email || guestEmail || 'guest@onzu.kitchen',
@@ -201,6 +256,49 @@ export default function Cart() {
                    </div>
                 )}
 
+                {user && addresses.length > 0 && (
+                  <div className="mb-6 space-y-3">
+                    <label className="text-[10px] font-bold text-mocha uppercase tracking-[0.2em] block pl-1">Saved Addresses</label>
+                    <div className="flex flex-col gap-2">
+                       {addresses.map(addr => (
+                         <button
+                           key={addr.id}
+                           onClick={() => handleSelectAddress(addr)}
+                           className={cn(
+                             "flex items-center gap-3 p-3 rounded-xl border transition-all text-left group",
+                             selectedAddressId === addr.id 
+                               ? "bg-caramel border-caramel shadow-md" 
+                               : "bg-white border-biscuit/40 hover:border-caramel/30"
+                           )}
+                         >
+                           <div className={cn(
+                             "w-8 h-8 rounded-lg flex items-center justify-center shrink-0",
+                             selectedAddressId === addr.id ? "bg-white text-caramel" : "bg-cream text-mocha/40 group-hover:text-caramel"
+                           )}>
+                             {addr.label === 'Home' ? <Home className="w-4 h-4" /> : 
+                              addr.label === 'Work' ? <Briefcase className="w-4 h-4" /> : <MapPin className="w-4 h-4" />}
+                           </div>
+                           <div className="min-w-0">
+                             <p className={cn("text-xs font-bold uppercase tracking-widest", selectedAddressId === addr.id ? "text-white" : "text-mocha")}>{addr.label}</p>
+                             <p className={cn("text-[10px] truncate max-w-[150px]", selectedAddressId === addr.id ? "text-white/80" : "text-mocha/40")}>{addr.fullAddress}</p>
+                           </div>
+                           {selectedAddressId === addr.id && <Check className="w-4 h-4 text-white ml-auto" />}
+                         </button>
+                       ))}
+                       <button 
+                         onClick={handleManualEntry}
+                         className={cn(
+                           "flex items-center gap-3 p-3 rounded-xl border-2 border-dashed transition-all text-left",
+                           !selectedAddressId ? "bg-cream border-caramel text-caramel" : "border-biscuit/40 text-mocha/30 hover:border-caramel/30"
+                         )}
+                       >
+                         <Plus className="w-4 h-4" />
+                         <span className="text-[10px] font-bold uppercase tracking-widest">Use different address</span>
+                       </button>
+                    </div>
+                  </div>
+                )}
+
                 <div className="mb-4">
                   <label className="text-[10px] font-bold text-mocha uppercase tracking-[0.2em] mb-2 block">Phone Number *</label>
                   <input 
@@ -209,11 +307,14 @@ export default function Cart() {
                     className="w-full bg-white border-2 border-biscuit rounded-xl px-4 py-2 text-sm outline-none focus:border-caramel transition-all font-body font-bold"
                     placeholder="01XXXXXXXXX"
                     value={phoneNumber}
-                    onChange={(e) => setPhoneNumber(e.target.value)}
+                    onChange={(e) => {
+                      setPhoneNumber(e.target.value);
+                      if (selectedAddressId) setSelectedAddressId(null);
+                    }}
                   />
                 </div>
 
-                <div>
+                <div className="mb-4">
                   <label className="text-[10px] font-bold text-mocha uppercase tracking-[0.2em] mb-2 block">Delivery Address *</label>
                   <div className="relative">
                     <MapPin className="absolute left-3 top-3 w-4 h-4 text-caramel" />
@@ -223,10 +324,60 @@ export default function Cart() {
                       className="w-full bg-white border-2 border-biscuit rounded-xl pl-9 pr-4 py-2 text-sm outline-none focus:border-caramel transition-all resize-none font-body"
                       placeholder="Street, Area, City..."
                       value={location}
-                      onChange={(e) => setLocation(e.target.value)}
+                      onChange={(e) => {
+                        setLocation(e.target.value);
+                        if (selectedAddressId) setSelectedAddressId(null);
+                      }}
                     />
                   </div>
                 </div>
+
+                {user && !selectedAddressId && (
+                  <div className="pt-2 border-t border-biscuit/20 space-y-3">
+                    <label className="flex items-center gap-2 cursor-pointer group">
+                      <div className="relative">
+                        <input 
+                          type="checkbox" 
+                          className="sr-only" 
+                          checked={saveToAddressBook}
+                          onChange={(e) => setSaveToAddressBook(e.target.checked)}
+                        />
+                        <div className={cn(
+                          "w-5 h-5 rounded-md border-2 transition-all flex items-center justify-center",
+                          saveToAddressBook ? "bg-caramel border-caramel" : "bg-white border-biscuit"
+                        )}>
+                          {saveToAddressBook && <Check className="w-3.5 h-3.5 text-white" />}
+                        </div>
+                      </div>
+                      <span className="text-[10px] font-bold text-mocha/40 uppercase tracking-widest">Save to Address Book</span>
+                    </label>
+
+                    <AnimatePresence>
+                      {saveToAddressBook && (
+                        <motion.div 
+                          initial={{ height: 0, opacity: 0 }}
+                          animate={{ height: 'auto', opacity: 1 }}
+                          exit={{ height: 0, opacity: 0 }}
+                          className="flex gap-2"
+                        >
+                          {(['Home', 'Work', 'Other'] as const).map(l => (
+                            <button
+                              key={l}
+                              type="button"
+                              onClick={() => setAddressLabel(l)}
+                              className={cn(
+                                "flex-1 py-2 rounded-xl border text-[9px] font-black uppercase tracking-tighter transition-all",
+                                addressLabel === l ? "bg-caramel border-caramel text-white" : "bg-white border-biscuit text-mocha/30"
+                              )}
+                            >
+                              {l}
+                            </button>
+                          ))}
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </div>
+                )}
               </div>
             </div>
 

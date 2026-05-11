@@ -59,7 +59,7 @@ service cloud.firestore {
     function isValidUser(data) {
       return data.keys().hasAll(['uid', 'email', 'role', 'createdAt'])
         && data.uid == request.auth.uid
-        && data.email == request.auth.token.email
+        && data.email == request.auth.token.email.lower()
         && data.role in ['user', 'admin']
         && (data.createdAt is timestamp || data.createdAt is string)
         && (!data.keys().hasAny(['name']) || data.name is string)
@@ -67,6 +67,17 @@ service cloud.firestore {
         && (!data.keys().hasAny(['address']) || data.address is string)
         && (!data.keys().hasAny(['photoURL']) || data.photoURL is string)
         && (!data.keys().hasAny(['updatedAt']) || data.updatedAt is timestamp || data.updatedAt is string);
+    }
+
+    function isValidAddress(data) {
+      return data.keys().hasAll(['label', 'fullAddress', 'phoneNumber', 'isDefault'])
+        && data.label in ['Home', 'Work', 'Other']
+        && data.fullAddress is string && data.fullAddress.size() > 0 && data.fullAddress.size() <= 2000
+        && data.phoneNumber is string && data.phoneNumber.size() > 0 && data.phoneNumber.size() <= 20
+        && data.isDefault is bool
+        && (!data.keys().hasAny(['id']) || data.id is string)
+        && (!data.keys().hasAny(['landmark']) || data.landmark is string)
+        && (!data.keys().hasAny(['createdAt']) || data.createdAt is timestamp || data.createdAt is string);
     }
 
     // --- Order Validation ---
@@ -90,12 +101,37 @@ service cloud.firestore {
         && (!data.keys().hasAny(['subtitle']) || data.subtitle is string);
     }
 
+    // --- Inquiry Validation ---
+    function isValidInquiry(data) {
+      return data.keys().hasAll(['userId', 'name', 'email', 'subject', 'message', 'status', 'createdAt'])
+        && (data.userId == (resource != null ? existing().userId : request.auth.uid) || data.userId == 'guest' || isAdmin())
+        && data.name is string && data.name.size() > 0 && data.name.size() <= 100
+        && data.email is string && data.email.size() <= 100
+        && data.subject is string && data.subject.size() > 0 && data.subject.size() <= 200
+        && data.message is string && data.message.size() > 0 && data.message.size() <= 5000
+        && data.status in ['pending', 'replied']
+        && (data.createdAt is timestamp || data.createdAt is string)
+        && (!data.keys().hasAny(['phone']) || data.phone is string)
+        && (!data.keys().hasAny(['adminReply']) || data.adminReply is string)
+        && (!data.keys().hasAny(['repliedAt']) || data.repliedAt is timestamp || data.repliedAt is string);
+    }
+
     // --- Rules ---
 
     match /home_curation/{itemId} {
       allow read: if true;
       allow create: if isAdmin() && isValidId(itemId) && isValidCuration(incoming());
       allow update: if isAdmin() && isValidCuration(incoming());
+      allow delete: if isAdmin();
+    }
+
+    match /inquiries/{inquiryId} {
+      allow read: if isSignedIn() && (isOwner(resource.data.userId) || isAdmin());
+      allow create: if (isSignedIn() || (incoming().userId == 'guest')) && isValidId(inquiryId) && isValidInquiry(incoming());
+      allow update: if isAdmin() && isValidInquiry(incoming()) && (
+        incoming().status == 'replied' &&
+        incoming().diff(existing()).affectedKeys().hasOnly(['adminReply', 'status', 'repliedAt'])
+      );
       allow delete: if isAdmin();
     }
 
@@ -131,6 +167,12 @@ service cloud.firestore {
         && incoming().createdAt == existing().createdAt; // Immutable field
         
       allow delete: if isOwner(userId);
+
+      match /addresses/{addressId} {
+        allow read: if isOwner(userId);
+        allow create, update: if isOwner(userId) && isValidAddress(incoming());
+        allow delete: if isOwner(userId);
+      }
     }
 
     match /admins/{adminId} {

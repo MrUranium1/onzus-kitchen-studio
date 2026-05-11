@@ -58,6 +58,38 @@
         "order": { "type": "number" }
       },
       "required": ["id", "imageUrl", "order"]
+    },
+    "Inquiry": {
+      "title": "Inquiry",
+      "description": "Customer inquiry or message",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "name": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "phone": { "type": "string" },
+        "subject": { "type": "string" },
+        "message": { "type": "string" },
+        "adminReply": { "type": "string" },
+        "status": { "type": "string", "enum": ["pending", "replied"] },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "repliedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "name", "email", "subject", "message", "status", "createdAt"]
+    },
+    "Address": {
+      "title": "Address",
+      "description": "User saved address",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "label": { "type": "string", "enum": ["Home", "Work", "Other"] },
+        "fullAddress": { "type": "string" },
+        "phoneNumber": { "type": "string" },
+        "landmark": { "type": "string" },
+        "isDefault": { "type": "boolean" }
+      },
+      "required": ["id", "label", "fullAddress", "phoneNumber", "isDefault"]
     }
   },
   "firestore": {
@@ -69,6 +101,10 @@
       "schema": "User",
       "description": "Collection of user profiles"
     },
+    "/users/{userId}/addresses/{addressId}": {
+      "schema": "Address",
+      "description": "Subcollection of user saved addresses"
+    },
     "/orders/{orderId}": {
       "schema": "Order",
       "description": "Collection of customer orders"
@@ -76,6 +112,10 @@
     "/home_curation/{itemId}": {
       "schema": "HomeCuration",
       "description": "Collection of featured homepage content"
+    },
+    "/inquiries/{inquiryId}": {
+      "schema": "Inquiry",
+      "description": "Collection of customer inquiries"
     },
     "/admins/{adminId}": {
       "schema": {

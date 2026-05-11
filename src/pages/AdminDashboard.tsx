@@ -19,16 +19,18 @@ import { useAuth } from '../context/AuthContext';
 import { getProducts, createProduct, updateProduct, deleteProduct } from '../services/productService';
 import { getOrders, Order, updateOrder, createOrder } from '../services/orderService';
 import { getCurationItems, saveCurationItems, addCurationItem, CurationItem } from '../services/curationService';
-import { Loader2, RefreshCw, Upload, Image as ImageIcon, ArrowUp, ArrowDown, MoveVertical } from 'lucide-react';
+import { getInquiries, replyToInquiry, deleteInquiry, Inquiry } from '../services/inquiryService';
+import { Loader2, RefreshCw, Upload, Image as ImageIcon, ArrowUp, ArrowDown, MoveVertical, MessageSquare } from 'lucide-react';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { storage } from '../lib/firebase';
 
 export default function AdminDashboard() {
   const { user, isAdmin, loading, logout } = useAuth();
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'menu' | 'orders' | 'settings' | 'curation'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'menu' | 'orders' | 'curation' | 'messages'>('dashboard');
   const [menuItems, setMenuItems] = useState<Product[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
   const [curationItems, setCurationItems] = useState<CurationItem[]>([]);
+  const [inquiries, setInquiries] = useState<Inquiry[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [isAddingItem, setIsAddingItem] = useState(false);
   const [isAddingOrder, setIsAddingOrder] = useState(false);
@@ -38,6 +40,9 @@ export default function AdminDashboard() {
   const [isUploading, setIsUploading] = useState(false);
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [activeInquiry, setActiveInquiry] = useState<Inquiry | null>(null);
+  const [replyText, setReplyText] = useState('');
+  const [isReplying, setIsReplying] = useState(false);
   
   const [curationFormData, setCurationFormData] = useState({
     title: '',
@@ -108,9 +113,14 @@ export default function AdminDashboard() {
     }
   };
 
+  const fetchInquiriesData = async () => {
+    const items = await getInquiries();
+    setInquiries(items);
+  };
+
   const refreshData = async () => {
     setIsRefreshing(true);
-    await Promise.all([fetchItems(), fetchOrders(), fetchCuration()]);
+    await Promise.all([fetchItems(), fetchOrders(), fetchCuration(), fetchInquiriesData()]);
     setIsRefreshing(false);
   };
 
@@ -452,6 +462,50 @@ export default function AdminDashboard() {
     i.category.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  const handleReplySubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!activeInquiry || !replyText.trim()) return;
+
+    setIsReplying(true);
+    try {
+      await replyToInquiry(activeInquiry.id, replyText);
+      setInquiries(prev => prev.map(inq => 
+        inq.id === activeInquiry.id 
+          ? { ...inq, adminReply: replyText, status: 'replied', repliedAt: { seconds: Date.now() / 1000 } } 
+          : inq
+      ));
+      setSuccessMessage('Reply sent successfully!');
+      setTimeout(() => {
+        setActiveInquiry(null);
+        setReplyText('');
+        setSuccessMessage('');
+      }, 1500);
+    } catch (error) {
+      console.error(error);
+      setErrorStatus('Failed to send reply.');
+    } finally {
+      setIsReplying(false);
+    }
+  };
+
+  const handleDeleteInquiry = async (id: string) => {
+    if (!confirm('Are you sure you want to delete this message?')) return;
+    try {
+      await deleteInquiry(id);
+      setInquiries(prev => prev.filter(inq => inq.id !== id));
+    } catch (error) {
+      console.error(error);
+      alert('Failed to delete message.');
+    }
+  };
+
+  const formatDate = (date: any) => {
+    if (!date) return '-';
+    if (date.seconds) return new Date(date.seconds * 1000).toLocaleString();
+    if (date instanceof Date) return date.toLocaleString();
+    return new Date(date).toLocaleString();
+  };
+
   if (loading) return null;
 
   return (
@@ -469,11 +523,11 @@ export default function AdminDashboard() {
       <section className="max-w-7xl mx-auto px-4 -mt-10 relative z-10">
         <div className="bg-white rounded-[2rem] shadow-xl p-2.5 flex flex-wrap gap-2 border border-biscuit">
           {[
-            { id: 'dashboard', label: '📊 Dashboard' },
-            { id: 'menu', label: '🍰 Manage Menu' },
-            { id: 'curation', label: '🏠 Home Curation' },
-            { id: 'orders', label: '📦 Orders' },
-            { id: 'settings', label: '⚙️ Settings' },
+            { id: 'dashboard', label: 'Dashboard' },
+            { id: 'menu', label: 'Manage Menu' },
+            { id: 'curation', label: 'Home Curation' },
+            { id: 'orders', label: 'Orders' },
+            { id: 'messages', label: 'Messages' },
           ].map((tab) => (
             <button
               key={tab.id}
@@ -846,7 +900,10 @@ export default function AdminDashboard() {
                         ) : (
                            <>
                               <button 
-                                onClick={() => setEditingItem(item)}
+                                onClick={() => {
+                                  setEditingItem(item);
+                                  setIsAddingItem(true);
+                                }}
                                 className="flex-1 py-3 text-xs font-bold text-mocha/70 hover:bg-cream/50 rounded-xl transition-all flex items-center justify-center gap-2 border border-biscuit"
                               >
                                  <Edit2 className="w-4 h-4" /> Edit Details
@@ -965,81 +1022,99 @@ export default function AdminDashboard() {
           </motion.div>
         )}
 
-        {activeTab === 'settings' && (
-          <motion.div initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} className="max-w-3xl mx-auto">
-             <div className="bg-white p-12 rounded-[3rem] border border-biscuit shadow-2xl">
-                <h3 className="font-display text-4xl text-espresso mb-2">Store Profile</h3>
-                <p className="text-mocha/40 text-sm mb-12">Configure your digital bakery presence</p>
-                
-                <div className="bg-honey/5 p-8 rounded-[2rem] border border-honey/20 mb-12">
-                   <div className="flex items-start gap-5">
-                      <div className="text-3xl">🧩</div>
-                      <div>
-                        <p className="text-xs font-bold text-espresso uppercase tracking-widest mb-2">Artisan Toolkit</p>
-                        <p className="text-xs text-mocha/60 mb-6 leading-relaxed">Need a fresh start? Re-initialize your menu with our signature collection of items.</p>
-                        {showReseedConfirm ? (
-                           <div className="flex gap-3">
-                              <button 
-                                onClick={async () => {
-                                   setIsReseeding(true);
-                                   try {
-                                      for (const p of PRODUCTS) {
-                                         await createProduct(p);
-                                      }
-                                      setSuccessMessage('Menu seeded successfully!');
-                                      refreshData();
-                                      setShowReseedConfirm(false);
-                                   } catch (e) {
-                                      setErrorStatus('Seeding failed. Ensure you are an admin.');
-                                   } finally {
-                                      setIsReseeding(false);
-                                   }
-                                }}
-                                disabled={isReseeding}
-                                className="bg-rust text-white font-bold px-8 py-3 rounded-xl text-xs hover:bg-rust/90 transition-all shadow-sm"
-                              >
-                                 {isReseeding ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Confirm Import'}
-                              </button>
-                              <button 
-                                onClick={() => setShowReseedConfirm(false)}
-                                disabled={isReseeding}
-                                className="bg-gray-100 text-mocha/60 font-bold px-8 py-3 rounded-xl text-xs hover:bg-gray-200 transition-all"
-                              >
-                                 Cancel
-                              </button>
-                           </div>
-                        ) : (
-                           <button 
-                              onClick={() => setShowReseedConfirm(true)}
-                              className="bg-honey text-espresso font-bold px-8 py-3 rounded-xl text-xs hover:bg-honey/90 transition-all shadow-sm"
-                           >
-                              Reseed Default Menu Items
-                           </button>
-                        )}
-                      </div>
-                   </div>
-                </div>
+        {activeTab === 'messages' && (
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-8">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+              <div>
+                <h2 className="font-display text-3xl text-espresso mb-1">Customer Inquiries</h2>
+                <p className="text-mocha/40 text-sm font-body">Manage messages and orders enquiries</p>
+              </div>
+              <button 
+                onClick={refreshData}
+                disabled={isRefreshing}
+                className="p-4 bg-white border border-biscuit rounded-2xl text-mocha/40 hover:text-caramel transition-all shadow-sm"
+              >
+                <RefreshCw className={cn("w-6 h-6", isRefreshing && "animate-spin")} />
+              </button>
+            </div>
 
-                <form className="space-y-8">
-                  <div className="grid md:grid-cols-2 gap-8">
-                    <div className="space-y-2">
-                       <label className="text-[10px] font-bold text-mocha/40 uppercase tracking-[0.2em] ml-2">Kitchen Name</label>
-                       <input type="text" defaultValue="Onzu's Kitchen" className="w-full px-6 py-4 bg-cream/30 border border-biscuit rounded-2xl outline-none focus:border-caramel transition-all font-bold text-espresso" />
+            <div className="grid gap-6">
+              {inquiries.map((inquiry) => (
+                <div key={inquiry.id} className="bg-white rounded-[2rem] border border-biscuit shadow-sm overflow-hidden hover:border-caramel/30 transition-all">
+                  <div className="p-8">
+                    <div className="flex flex-wrap justify-between items-start gap-4 mb-6">
+                      <div className="flex items-center gap-4">
+                        <div className="w-12 h-12 rounded-full bg-caramel/10 flex items-center justify-center text-xl shadow-inner">
+                          {inquiry.userId === 'guest' ? '👤' : '⭐'}
+                        </div>
+                        <div>
+                          <h3 className="font-display text-lg text-espresso">{inquiry.name}</h3>
+                          <p className="text-[10px] text-mocha/40 font-bold uppercase tracking-widest">{inquiry.email} • {inquiry.phone || 'No Phone'}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <span className={cn(
+                          "px-4 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-widest border",
+                          inquiry.status === 'pending' ? 'bg-amber-50 text-amber-600 border-amber-100' : 'bg-green-50 text-green-600 border-green-100'
+                        )}>
+                          {inquiry.status}
+                        </span>
+                        <button 
+                          onClick={() => handleDeleteInquiry(inquiry.id)}
+                          className="p-2 text-red-300 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
                     </div>
-                    <div className="space-y-2">
-                       <label className="text-[10px] font-bold text-mocha/40 uppercase tracking-[0.2em] ml-2">Support Email</label>
-                       <input type="email" defaultValue="hello@onzuskitchen.com" className="w-full px-6 py-4 bg-cream/30 border border-biscuit rounded-2xl outline-none focus:border-caramel transition-all text-espresso" />
+
+                    <div className="space-y-4">
+                      <div className="bg-cream/30 p-6 rounded-2xl border border-biscuit">
+                        <p className="text-[10px] font-bold text-mocha/40 uppercase tracking-widest mb-2">Subject: {inquiry.subject}</p>
+                        <p className="text-sm text-espresso font-body leading-relaxed whitespace-pre-wrap">{inquiry.message}</p>
+                        <p className="text-[10px] text-mocha/30 mt-4 text-right">{formatDate(inquiry.createdAt)}</p>
+                      </div>
+
+                      {inquiry.adminReply ? (
+                        <div className="bg-caramel/5 p-6 rounded-2xl border border-caramel/20 ml-8 relative">
+                          <div className="absolute -left-3 top-6 w-3 h-3 bg-caramel/10 border-l border-t border-caramel/20 rotate-45"></div>
+                          <p className="text-[10px] font-bold text-caramel uppercase tracking-widest mb-2">Your Reply:</p>
+                          <p className="text-sm text-espresso font-body leading-relaxed whitespace-pre-wrap">{inquiry.adminReply}</p>
+                          <div className="flex justify-between items-center mt-4">
+                             <button 
+                               onClick={() => {
+                                 setActiveInquiry(inquiry);
+                                 setReplyText(inquiry.adminReply || '');
+                               }}
+                               className="text-[10px] font-bold text-caramel hover:underline uppercase tracking-widest"
+                             >
+                               Edit Reply
+                             </button>
+                             <p className="text-[10px] text-mocha/30 text-right">{formatDate(inquiry.repliedAt)}</p>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="flex justify-end">
+                          <button 
+                            onClick={() => setActiveInquiry(inquiry)}
+                            className="bg-espresso text-honey font-bold px-8 py-3 rounded-xl text-xs flex items-center gap-2 hover:bg-mocha transition-all shadow-md"
+                          >
+                            <MessageSquare className="w-4 h-4" /> Reply Now
+                          </button>
+                        </div>
+                      )}
                     </div>
                   </div>
-                  <div className="space-y-2">
-                     <label className="text-[10px] font-bold text-mocha/40 uppercase tracking-[0.2em] ml-2">Bakery Bio</label>
-                     <textarea rows={4} className="w-full px-6 py-4 bg-cream/30 border border-biscuit rounded-2xl outline-none focus:border-caramel transition-all text-espresso resize-none font-body text-sm">Onzu's Kitchen brings authentic home-baked goodness to Dhaka. Every order is crafted with love and the finest ingredients.</textarea>
-                  </div>
-                  <button type="button" className="w-full md:w-auto bg-espresso text-honey font-bold px-12 py-5 rounded-2xl shadow-xl hover:bg-mocha active:scale-95 transition-all text-sm tracking-widest uppercase">
-                    Update Bakery Identity
-                  </button>
-                </form>
-             </div>
+                </div>
+              ))}
+
+              {inquiries.length === 0 && (
+                <div className="bg-white rounded-[3rem] border-2 border-dashed border-biscuit py-20 text-center">
+                  <MessageSquare className="w-16 h-16 text-biscuit mx-auto mb-4 opacity-40" />
+                  <p className="text-mocha/40 font-bold uppercase tracking-widest text-xs">No customer inquiries yet</p>
+                </div>
+              )}
+            </div>
           </motion.div>
         )}
       </div>
@@ -1283,6 +1358,58 @@ export default function AdminDashboard() {
                       <ShoppingBag className="w-5 h-5" /> Save Order
                    </button>
                 </form>
+             </motion.div>
+          </div>
+        )}
+
+        {activeInquiry && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-espresso/60 backdrop-blur-sm" onClick={() => setActiveInquiry(null)}>
+             <motion.div 
+                initial={{ opacity: 0, scale: 0.95, y: 10 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.95, y: 10 }}
+                className="bg-white rounded-[2rem] w-full max-w-lg shadow-2xl overflow-hidden"
+                onClick={e => e.stopPropagation()}
+             >
+                <div className="p-8 border-b border-biscuit flex justify-between items-center">
+                   <h2 className="font-display text-xl text-espresso">Reply to Enquiry</h2>
+                   <button onClick={() => setActiveInquiry(null)} className="p-2 hover:bg-cream rounded-lg transition-colors"><X className="w-5 h-5 text-mocha/40" /></button>
+                </div>
+                <div className="p-8 space-y-6">
+                   <div className="bg-cream/30 p-5 rounded-2xl border border-biscuit text-sm">
+                      <p className="font-bold text-espresso mb-1">{activeInquiry.name} wrote:</p>
+                      <p className="text-mocha/70 italic">"{activeInquiry.message}"</p>
+                   </div>
+
+                   <form onSubmit={handleReplySubmit} className="space-y-6">
+                      <div className="space-y-2">
+                         <label className="text-[10px] font-bold text-mocha/40 uppercase tracking-widest pl-1">Your Remark / Response</label>
+                         <textarea 
+                            rows={5} 
+                            required
+                            className="w-full px-5 py-4 bg-cream/30 border border-biscuit rounded-2xl outline-none focus:border-caramel focus:bg-white transition-all text-sm resize-none" 
+                            placeholder="Type your reply here..."
+                            value={replyText}
+                            onChange={e => setReplyText(e.target.value)}
+                         ></textarea>
+                      </div>
+
+                      {successMessage && (
+                        <div className="text-center py-3 bg-green-50 text-green-600 rounded-xl text-xs font-bold border border-green-100">
+                          {successMessage}
+                        </div>
+                      )}
+
+                      <button 
+                        type="submit" 
+                        disabled={isReplying || !replyText.trim()}
+                        className="w-full bg-caramel text-cream font-bold py-4 rounded-2xl shadow-xl hover:bg-rust active:scale-95 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+                      >
+                         {isReplying ? <Loader2 className="w-5 h-5 animate-spin" /> : <MessageSquare className="w-5 h-5" />}
+                         {isReplying ? 'Sending...' : 'Send Reply'}
+                      </button>
+                   </form>
+                </div>
              </motion.div>
           </div>
         )}

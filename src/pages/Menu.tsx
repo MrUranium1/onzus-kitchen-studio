@@ -43,13 +43,13 @@ export default function Menu() {
   }, [category, searchTerm, menuItems]);
 
   const categories = [
-    { id: 'all', label: '🍽 All Items' },
-    { id: 'cakes', label: '🎂 Cakes' },
-    { id: 'pastries', label: '🥐 Pastries' },
-    { id: 'cookies', label: '🍪 Cookies' },
-    { id: 'breads', label: '🍞 Breads' },
-    { id: 'muffins', label: '🧁 Muffins' },
-    { id: 'specials', label: '⭐ Specials' },
+    { id: 'all', label: 'All Items' },
+    { id: 'cakes', label: 'Cakes' },
+    { id: 'pastries', label: 'Pastries' },
+    { id: 'cookies', label: 'Cookies' },
+    { id: 'breads', label: 'Breads' },
+    { id: 'muffins', label: 'Muffins' },
+    { id: 'specials', label: 'Specials' },
   ];
 
   const filteredProducts = menuItems.filter(p => {

@@ -1,16 +1,22 @@
 import React, { useState } from 'react';
-import { X, Chrome, Mail, Lock, LogIn, ChevronRight } from 'lucide-react';
+import { X, Chrome, Mail, Lock, LogIn, ChevronRight, User, Phone, Eye, EyeOff, AlertCircle, CheckCircle2, Loader2 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { motion, AnimatePresence } from 'motion/react';
+import { useNavigate } from 'react-router-dom';
+import { cn } from '../lib/utils';
 
 export default function AuthModal() {
   const { isAuthModalOpen, closeAuthModal, loginWithGoogle, loginWithEmail, signUpWithEmail, loading } = useAuth();
+  const navigate = useNavigate();
   const [showEmailForm, setShowEmailForm] = useState(false);
   const [isSignUp, setIsSignUp] = useState(false);
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
   
   if (!isAuthModalOpen) return null;
 
@@ -19,8 +25,11 @@ export default function AuthModal() {
     setIsSignUp(false);
     setName('');
     setEmail('');
+    setPhone('');
     setPassword('');
     setError('');
+    setSuccess('');
+    setShowPassword(false);
   };
 
   const handleClose = () => {
@@ -39,20 +48,52 @@ export default function AuthModal() {
     }
   };
 
+  const getPasswordStrength = (pass: string) => {
+    if (!pass) return 0;
+    let score = 0;
+    if (pass.length >= 6) score += 1;
+    if (pass.length >= 10) score += 1;
+    if (/[A-Z]/.test(pass)) score += 1;
+    if (/[0-9]/.test(pass)) score += 1;
+    if (/[^A-Za-z0-9]/.test(pass)) score += 1;
+    return score;
+  };
+
+  const strength = getPasswordStrength(password);
+  const strengthText = ['Weak', 'Fair', 'Good', 'Strong', 'Excellent'][strength - 1] || '';
+  const strengthColor = ['bg-red-400', 'bg-orange-400', 'bg-yellow-400', 'bg-green-400', 'bg-emerald-500'][strength - 1] || 'bg-gray-200';
+
   const handleEmailAction = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    setSuccess('');
+    
     try {
       if (isSignUp) {
         if (!name.trim()) {
           setError('Name is required');
           return;
         }
-        await signUpWithEmail(email, password, name);
+        if (!phone.trim()) {
+          setError('Phone number is required');
+          return;
+        }
+        if (password.length < 6) {
+          setError('Password must be at least 6 characters');
+          return;
+        }
+        await signUpWithEmail(email, password, name, phone);
+        setSuccess('Account created successfully! Welcome to the family.');
+        
+        // Auto-login logic (Firebase handles auto-login on signup)
+        setTimeout(() => {
+          handleClose();
+          navigate('/'); // Redirect to Home
+        }, 1500);
       } else {
         await loginWithEmail(email, password);
+        handleClose();
       }
-      handleClose();
     } catch (err: any) {
       console.error("Auth error:", err);
       if (err.code === 'auth/operation-not-allowed') {
@@ -168,52 +209,114 @@ export default function AuthModal() {
                 </div>
 
                 {isSignUp && (
-                  <div className="relative">
-                    <Mail className="absolute left-4 top-4 w-4 h-4 text-biscuit" />
-                    <input 
-                      type="text"
-                      required
-                      placeholder="Your Full Name"
-                      className="w-full bg-white border-2 border-biscuit rounded-2xl pl-11 pr-4 py-3.5 text-sm outline-none focus:border-caramel transition-colors font-body"
-                      value={name}
-                      onChange={(e) => setName(e.target.value)}
-                    />
-                  </div>
+                  <>
+                    <div className="relative group">
+                      <User className="absolute left-4 top-4 w-4 h-4 text-biscuit group-focus-within:text-caramel transition-colors" />
+                      <input 
+                        type="text"
+                        required
+                        placeholder="Full Name *"
+                        className="w-full bg-white border-2 border-biscuit rounded-2xl pl-11 pr-4 py-3.5 text-sm outline-none focus:border-caramel transition-all font-body active:scale-[0.99] focus:scale-[1.01]"
+                        value={name}
+                        onChange={(e) => setName(e.target.value)}
+                      />
+                    </div>
+                    <div className="relative group">
+                      <Phone className="absolute left-4 top-4 w-4 h-4 text-biscuit group-focus-within:text-caramel transition-colors" />
+                      <input 
+                        type="tel"
+                        required
+                        placeholder="Phone Number *"
+                        className="w-full bg-white border-2 border-biscuit rounded-2xl pl-11 pr-4 py-3.5 text-sm outline-none focus:border-caramel transition-all font-body active:scale-[0.99] focus:scale-[1.01]"
+                        value={phone}
+                        onChange={(e) => setPhone(e.target.value)}
+                      />
+                    </div>
+                  </>
                 )}
 
-                <div className="relative">
-                  <Mail className="absolute left-4 top-4 w-4 h-4 text-biscuit" />
+                <div className="relative group">
+                  <Mail className="absolute left-4 top-4 w-4 h-4 text-biscuit group-focus-within:text-caramel transition-colors" />
                   <input 
                     type="email"
                     required
-                    placeholder="Email address"
-                    className="w-full bg-white border-2 border-biscuit rounded-2xl pl-11 pr-4 py-3.5 text-sm outline-none focus:border-caramel transition-colors font-body"
+                    placeholder="Email Address *"
+                    className="w-full bg-white border-2 border-biscuit rounded-2xl pl-11 pr-4 py-3.5 text-sm outline-none focus:border-caramel transition-all font-body active:scale-[0.99] focus:scale-[1.01]"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                   />
                 </div>
 
-                <div className="relative">
-                  <Lock className="absolute left-4 top-4 w-4 h-4 text-biscuit" />
+                <div className="relative group">
+                  <Lock className="absolute left-4 top-4 w-4 h-4 text-biscuit group-focus-within:text-caramel transition-colors" />
                   <input 
-                    type="password"
+                    type={showPassword ? "text" : "password"}
                     required
-                    placeholder="Password"
-                    className="w-full bg-white border-2 border-biscuit rounded-2xl pl-11 pr-4 py-3.5 text-sm outline-none focus:border-caramel transition-colors font-body"
+                    placeholder="Password *"
+                    className="w-full bg-white border-2 border-biscuit rounded-2xl pl-11 pr-11 py-3.5 text-sm outline-none focus:border-caramel transition-all font-body active:scale-[0.99] focus:scale-[1.01]"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                   />
+                  <button 
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-4 top-4 text-biscuit hover:text-caramel transition-colors"
+                  >
+                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
                 </div>
 
-                {error && <p className="text-red-500 text-[10px] font-bold text-center uppercase">{error}</p>}
+                {isSignUp && password && (
+                  <div className="px-1 space-y-1.5">
+                    <div className="flex justify-between items-center text-[9px] font-bold uppercase tracking-widest text-mocha/40">
+                      <span>Security: {strengthText}</span>
+                      <span>{Math.min(strength * 20, 100)}%</span>
+                    </div>
+                    <div className="h-1.5 w-full bg-mocha/5 rounded-full overflow-hidden flex gap-0.5">
+                      {[1, 2, 3, 4, 5].map((level) => (
+                        <div 
+                          key={level}
+                          className={cn(
+                            "h-full flex-1 transition-all duration-500",
+                            strength >= level ? strengthColor : "bg-mocha/10"
+                          )}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {error && (
+                  <motion.div 
+                    initial={{ opacity: 0, y: -5 }} animate={{ opacity: 1, y: 0 }}
+                    className="bg-red-50 text-rust p-3 rounded-xl flex items-center gap-2 border border-red-100"
+                  >
+                    <AlertCircle className="w-4 h-4 shrink-0" />
+                    <span className="text-[10px] font-bold uppercase leading-tight">{error}</span>
+                  </motion.div>
+                )}
+
+                {success && (
+                  <motion.div 
+                    initial={{ opacity: 0, y: -5 }} animate={{ opacity: 1, y: 0 }}
+                    className="bg-green-50 text-green-600 p-3 rounded-xl flex items-center gap-2 border border-green-100"
+                  >
+                    <CheckCircle2 className="w-4 h-4 shrink-0" />
+                    <span className="text-[10px] font-bold uppercase leading-tight">{success}</span>
+                  </motion.div>
+                )}
 
                 <button 
                   type="submit"
                   disabled={loading}
                   className="w-full bg-espresso hover:bg-mocha text-cream font-bold py-4 rounded-2xl font-body text-sm tracking-wide transition-all shadow-lg active:scale-95 flex items-center justify-center gap-3 disabled:opacity-50"
                 >
-                  {isSignUp ? <ChevronRight className="w-5 h-5" /> : <LogIn className="w-5 h-5" />}
-                  {loading ? 'Please wait...' : (isSignUp ? 'Sign Up' : 'Sign In')}
+                  {loading ? (
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                  ) : (
+                    isSignUp ? <ChevronRight className="w-5 h-5" /> : <LogIn className="w-5 h-5" />
+                  )}
+                  {loading ? 'Processing...' : (isSignUp ? 'Create Account' : 'Sign In')}
                 </button>
 
                 <div className="text-center mt-4">
