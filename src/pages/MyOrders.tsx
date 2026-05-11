@@ -2,8 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
 import { ShoppingBag, Clock, Package, CheckCircle2, ChevronRight, Inbox, Sparkles } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import { getOrders, Order } from '../services/orderService';
-import { Link, useNavigate } from 'react-router-dom';
+import { getOrdersByUser, Order } from '../services/orderService';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { cn } from '../lib/utils';
 import { Loader2 } from 'lucide-react';
 
@@ -12,6 +12,8 @@ export default function MyOrders() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const highlightId = searchParams.get('id');
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -23,14 +25,7 @@ export default function MyOrders() {
     const fetchMyOrders = async () => {
       if (user) {
         try {
-          const allOrders = await getOrders();
-          const myOrders = allOrders
-            .filter(o => o.userId === user.uid)
-            .sort((a, b) => {
-              const dateA = a.createdAt?.toDate ? a.createdAt.toDate().getTime() : 0;
-              const dateB = b.createdAt?.toDate ? b.createdAt.toDate().getTime() : 0;
-              return dateB - dateA;
-            });
+          const myOrders = await getOrdersByUser(user.uid);
           setOrders(myOrders);
         } catch (error) {
           console.error("Error fetching orders:", error);
@@ -41,6 +36,15 @@ export default function MyOrders() {
     };
     fetchMyOrders();
   }, [user]);
+
+  useEffect(() => {
+    if (highlightId && !loading && orders.length > 0) {
+      const element = document.getElementById(highlightId);
+      if (element) {
+        element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    }
+  }, [highlightId, loading, orders]);
 
   if (authLoading || loading) {
     return (
@@ -66,10 +70,14 @@ export default function MyOrders() {
             {orders.map((order, idx) => (
               <motion.div 
                 key={order.id}
+                id={order.id}
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: idx * 0.1 }}
-                className="bg-white rounded-3xl shadow-xl overflow-hidden border border-biscuit group hover:shadow-2xl transition-all"
+                className={cn(
+                  "bg-white rounded-3xl shadow-xl overflow-hidden border border-biscuit group hover:shadow-2xl transition-all",
+                  highlightId === order.id && "ring-2 ring-caramel ring-offset-4 ring-offset-cream"
+                )}
               >
                 <div className="p-6 md:p-8">
                   <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
@@ -107,7 +115,7 @@ export default function MyOrders() {
 
                   <div className="pt-6 border-t border-biscuit flex flex-col md:flex-row justify-between items-end md:items-center gap-4">
                     <div className="text-left w-full md:w-auto">
-                      <p className="text-[10px] font-bold text-mocha/30 uppercase tracking-widest mb-1">Delivered to</p>
+                      <p className="text-[10px] font-bold text-mocha/30 uppercase tracking-widest mb-1">Delivery Address</p>
                       <p className="text-xs font-body text-mocha/60 max-w-[250px] truncate">{order.location}</p>
                     </div>
                     <div className="text-right">

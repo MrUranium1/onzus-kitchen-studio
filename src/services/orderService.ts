@@ -6,6 +6,7 @@ import {
   setDoc,
   getDocs,
   query,
+  where,
   orderBy,
   updateDoc
 } from 'firebase/firestore';
@@ -73,6 +74,21 @@ export const getOrders = async (): Promise<Order[]> => {
     return snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as Order));
   } catch (error) {
     handleFirestoreError(error, OperationType.LIST, COLLECTION_NAME);
+    return [];
+  }
+};
+
+export const getOrdersByUser = async (userId: string): Promise<Order[]> => {
+  try {
+    const q = query(
+      collection(db, COLLECTION_NAME), 
+      where('userId', '==', userId),
+      orderBy('createdAt', 'desc')
+    );
+    const snapshot = await getDocs(q);
+    return snapshot.docs.map(doc => ({ ...doc.data(), id: doc.id } as Order));
+  } catch (error) {
+    handleFirestoreError(error, OperationType.LIST, `${COLLECTION_NAME}?userId=${userId}`);
     return [];
   }
 };

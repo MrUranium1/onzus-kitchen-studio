@@ -53,7 +53,9 @@ export const updateProduct = async (id: string | number, product: Partial<Produc
   const path = `${COLLECTION_NAME}/${id}`;
   try {
     const docRef = doc(db, COLLECTION_NAME, id.toString());
-    await updateDoc(docRef, cleanData(product));
+    // Using setDoc with merge: true handles both updates and creations more robustly
+    // than updateDoc (which fails if document doesn't exist)
+    await setDoc(docRef, cleanData(product), { merge: true });
   } catch (error) {
     handleFirestoreError(error, OperationType.UPDATE, path);
     throw error;

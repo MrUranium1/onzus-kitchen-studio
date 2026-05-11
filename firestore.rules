@@ -18,7 +18,7 @@ service cloud.firestore {
     function isAdmin() {
       return isSignedIn() && (
         exists(/databases/$(database)/documents/admins/$(request.auth.uid)) ||
-        request.auth.token.email in ['hossainmehir2006@gmail.com', 'onzu080@gmail.com']
+        request.auth.token.email.lower() in ['hossainmehir2006@gmail.com', 'onzu080@gmail.com']
       );
     }
 
@@ -61,7 +61,12 @@ service cloud.firestore {
         && data.uid == request.auth.uid
         && data.email == request.auth.token.email
         && data.role in ['user', 'admin']
-        && (data.createdAt is timestamp || data.createdAt is string);
+        && (data.createdAt is timestamp || data.createdAt is string)
+        && (!data.keys().hasAny(['name']) || data.name is string)
+        && (!data.keys().hasAny(['phoneNumber']) || data.phoneNumber is string)
+        && (!data.keys().hasAny(['address']) || data.address is string)
+        && (!data.keys().hasAny(['photoURL']) || data.photoURL is string)
+        && (!data.keys().hasAny(['updatedAt']) || data.updatedAt is timestamp || data.updatedAt is string);
     }
 
     // --- Order Validation ---
@@ -130,7 +135,7 @@ service cloud.firestore {
 
     match /admins/{adminId} {
       allow read: if isSignedIn();
-      allow write: if isOwner(adminId) && request.auth.token.email in ['hossainmehir2006@gmail.com', 'onzu080@gmail.com'];
+      allow write: if isOwner(adminId) && request.auth.token.email.lower() in ['hossainmehir2006@gmail.com', 'onzu080@gmail.com'];
     }
     
     match /test/connection {

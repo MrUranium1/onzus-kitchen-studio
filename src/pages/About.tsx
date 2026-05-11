@@ -70,7 +70,7 @@ export default function About() {
             <h2 className="font-display text-4xl text-espresso mb-6 leading-tight">A Mother's Recipe,<br/><em>A Daughter's Dream</em></h2>
             <div className="space-y-4 font-body text-mocha/80 leading-relaxed text-base">
               <p>
-                Onzu's Kitchen started in 2019 when Onzu — a passionate home baker — began sharing her late mother's cookie recipe with neighbours in Mohammadpur. What started as a small act of love quickly turned into something much bigger.
+                Onzu's Kitchen started in 2019 when Onzu — a passionate home baker — began sharing her late mother's cookie recipe with neighbours in Kazipara, Mirpur, Dhaka 1216, Bangladesh. What started as a small act of love quickly turned into something much bigger.
               </p>
               <p>
                 Every weekend, the aroma of fresh bread and cinnamon rolls would drift through the alley. Neighbours would knock, friends would call, and soon strangers were placing orders. Onzu realised she wasn't just baking — she was creating moments of joy.

@@ -4,7 +4,8 @@ import { PRODUCTS, Product } from '../data/products';
 import { getProducts, createProduct } from '../services/productService';
 import { Star, Search, Filter, Loader2 } from 'lucide-react';
 import { cn } from '../lib/utils';
-import { motion, AnimatePresence } from 'motion/react';
+import { motion } from 'motion/react';
+import ProductModal from '../components/ProductModal';
 
 export default function Menu() {
   const { addToCart } = useCart();
@@ -155,55 +156,11 @@ export default function Menu() {
       </main>
 
       {/* Product Modal */}
-      <AnimatePresence>
-        {selectedProduct && (
-          <div 
-            className="fixed inset-0 z-[600] flex items-center justify-center px-4 bg-black/70 backdrop-blur-md" 
-            onClick={() => setSelectedProduct(null)}
-          >
-            <motion.div 
-              initial={{ opacity: 0, scale: 0.9, y: 20 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.9, y: 20 }}
-              className="bg-cream rounded-3xl max-w-2xl w-full shadow-2xl overflow-hidden"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <div className="px-6 py-4 border-b border-biscuit flex justify-between items-center bg-white/50">
-                <h3 className="font-display text-2xl text-espresso">{selectedProduct.name}</h3>
-                <button onClick={() => setSelectedProduct(null)} className="text-3xl text-mocha/70 hover:text-espresso">×</button>
-              </div>
-
-              <div className="p-6">
-                <div className="grid md:grid-cols-2 gap-8">
-                  <div className="aspect-square rounded-2xl overflow-hidden shadow-lg">
-                    <img src={selectedProduct.img} className="w-full h-full object-cover" alt={selectedProduct.name}/>
-                  </div>
-                  
-                  <div className="flex flex-col">
-                    <p className="text-3xl font-bold text-rust mb-3">৳{selectedProduct.price}</p>
-                    <div className="flex gap-1 mb-4 text-yellow-400">
-                      {[...Array(5)].map((_, i) => (
-                        <Star key={i} className={cn("w-4 h-4 fill-current", i >= selectedProduct.rating && "text-gray-200 fill-none")} />
-                      ))}
-                      <span className="text-mocha/50 text-xs font-body ml-2 self-center">(Based on {selectedProduct.reviews} reviews)</span>
-                    </div>
-                    <p className="text-mocha/80 leading-relaxed font-body text-sm mb-6 flex-grow">
-                      {selectedProduct.longDesc || "Freshly baked with love using our exclusive home recipes. Crafted with premium ingredients to ensure the perfect taste and texture."}
-                    </p>
-                    
-                    <button 
-                      onClick={() => { addToCart(selectedProduct); setSelectedProduct(null); }}
-                      className="w-full bg-espresso hover:bg-mocha text-cream font-bold py-4 rounded-2xl active:scale-95 transition-transform"
-                    >
-                      + Add to Cart
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
+      <ProductModal 
+        product={selectedProduct}
+        onClose={() => setSelectedProduct(null)}
+        onAddToCart={addToCart}
+      />
     </div>
   );
 }

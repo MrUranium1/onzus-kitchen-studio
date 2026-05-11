@@ -11,6 +11,7 @@ import {
 } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
 import { auth, db } from '../lib/firebase';
+import { getUserProfile, createUserProfile } from '../services/userService';
 
 interface User {
   uid: string;
@@ -56,6 +57,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         
         console.log(`User logged in: ${userEmail}, isHardcodedAdmin: ${isHardcodedAdmin}`);
         
+        // Ensure user profile exists in Firestore
+        try {
+          const profile = await getUserProfile(firebaseUser.uid);
+          if (!profile) {
+            console.log("Initializing new user profile...");
+            await createUserProfile({
+              uid: firebaseUser.uid,
+              name: firebaseUser.displayName || 'Guest',
+              email: userEmail,
+              photoURL: firebaseUser.photoURL || undefined
+            });
+          }
+        } catch (error) {
+          console.error("Error creating/checking user profile:", error);
+        }
+
         try {
           const adminDoc = await getDoc(doc(db, 'admins', firebaseUser.uid));
           const hasAdminDoc = adminDoc.exists();
@@ -114,6 +131,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       await updateProfile(userCredential.user, {
         displayName: name
       });
+
+      // Create firestore profile
+      await createUserProfile({
+        uid: userCredential.user.uid,
+        name: name,
+        email: email
+      });
+
       // Force user update in state
       setUser({
         uid: userCredential.user.uid,

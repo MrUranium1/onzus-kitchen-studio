@@ -42,8 +42,16 @@ export default function Navbar() {
         <div className="flex items-center justify-between h-16 md:h-20">
           {/* Logo */}
           <Link to="/" className="flex items-center gap-2 group">
-            <div className="w-9 h-9 rounded-full bg-caramel flex items-center justify-center shadow-md group-hover:scale-110 transition-transform">
-              <span className="text-cream text-lg">🧁</span>
+            <div className="w-10 h-10 rounded-full overflow-hidden shadow-md group-hover:scale-110 transition-transform bg-cream flex items-center justify-center border-2 border-caramel/20">
+              <img 
+                src="https://scontent.fdac33-1.fna.fbcdn.net/v/t39.30808-6/470977332_122104213982660798_3500586346432379768_n.jpg?_nc_cat=106&ccb=1-7&_nc_sid=53a332&_nc_ohc=WNahI8lZD3IQ7kNvwHfn8IV&_nc_oc=AdoCQINqI7ll1YKgAVLroZeXi9nDJTDKt613UvvO7bkRGk5ZJcRhluxHqV6ahQapk8I&_nc_zt=23&_nc_ht=scontent.fdac33-1.fna&_nc_gid=NZnrTgTHNuYinWR8CwCHuw&_nc_ss=7b2a8&oh=00_Af5Fx-X_tMIQBkB61uwo5H6VMB_up7ou19E89Ubs5DI-Iw&oe=6A073C92" 
+                alt="Onzu's Kitchen Logo" 
+                className="w-full h-full object-cover"
+                referrerPolicy="no-referrer"
+                onError={(e) => {
+                  (e.target as HTMLImageElement).src = 'https://cdn-icons-png.flaticon.com/512/992/992717.png';
+                }}
+              />
             </div>
             <div className="leading-tight">
               <span className="font-script text-xl md:text-2xl text-espresso tracking-wide">Onzu's Kitchen</span>
@@ -117,18 +125,13 @@ export default function Navbar() {
                       <p className="text-mocha/50 text-xs font-body truncate">{user.email}</p>
                     </div>
                     <div className="py-2 text-sm font-bold text-mocha">
-                      {isAdmin && (
-                        <Link 
-                          to="/admin/dashboard" 
-                          onClick={() => setIsAccountDropdownOpen(false)}
-                          className="w-full text-left px-4 py-2.5 bg-caramel/10 text-caramel hover:bg-caramel/20 transition-colors flex items-center gap-3"
-                        >
-                          🛡️ Admin Dashboard
-                        </Link>
-                      )}
-                      <button className="w-full text-left px-4 py-2.5 hover:bg-biscuit/60 transition-colors flex items-center gap-3">
+                      <Link 
+                        to="/account" 
+                        onClick={() => setIsAccountDropdownOpen(false)}
+                        className="w-full text-left px-4 py-2.5 hover:bg-biscuit/60 transition-colors flex items-center gap-3"
+                      >
                         👤 My Account
-                      </button>
+                      </Link>
                       <Link 
                         to="/orders" 
                         onClick={() => setIsAccountDropdownOpen(false)}
@@ -179,6 +182,24 @@ export default function Navbar() {
                 {link.name}
               </Link>
             ))}
+            {user && (
+              <>
+                <Link 
+                  to="/account" 
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className="py-2 px-3 rounded-lg hover:bg-biscuit"
+                >
+                  👤 My Account
+                </Link>
+                <Link 
+                  to="/orders" 
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className="py-2 px-3 rounded-lg hover:bg-biscuit"
+                >
+                  📦 My Orders
+                </Link>
+              </>
+            )}
             <a 
               href="https://wa.me/8801719262956" 
               target="_blank" 
@@ -187,15 +208,6 @@ export default function Navbar() {
             >
               <Send className="w-4 h-4 rotate-45" /> WhatsApp Order
             </a>
-            {isAdmin && (
-              <Link 
-                to="/admin/dashboard" 
-                onClick={() => setIsMobileMenuOpen(false)}
-                className="py-2 px-3 rounded-lg bg-espresso text-honey flex items-center gap-2"
-              >
-                🛡️ Admin Panel
-              </Link>
-            )}
           </div>
         </div>
       </div>

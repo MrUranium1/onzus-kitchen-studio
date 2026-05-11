@@ -82,8 +82,18 @@ export default function AuthModal() {
       >
         {/* Header */}
         <div className="bg-hero-bg text-cream px-8 pt-8 pb-6 relative hero-bg">
-          <div className="flex items-center gap-3 mb-1">
-            <span className="text-2xl">🧁</span>
+          <div className="flex items-center gap-3 mb-2">
+            <div className="w-10 h-10 rounded-full overflow-hidden bg-cream flex items-center justify-center shadow-sm border-2 border-honey/20">
+              <img 
+                src="https://scontent.fdac33-1.fna.fbcdn.net/v/t39.30808-6/470977332_122104213982660798_3500586346432379768_n.jpg?_nc_cat=106&ccb=1-7&_nc_sid=53a332&_nc_ohc=WNahI8lZD3IQ7kNvwHfn8IV&_nc_oc=AdoCQINqI7ll1YKgAVLroZeXi9nDJTDKt613UvvO7bkRGk5ZJcRhluxHqV6ahQapk8I&_nc_zt=23&_nc_ht=scontent.fdac33-1.fna&_nc_gid=NZnrTgTHNuYinWR8CwCHuw&_nc_ss=7b2a8&oh=00_Af5Fx-X_tMIQBkB61uwo5H6VMB_up7ou19E89Ubs5DI-Iw&oe=6A073C92" 
+                alt="Onzu's Kitchen Logo" 
+                className="w-full h-full object-cover"
+                referrerPolicy="no-referrer"
+                onError={(e) => {
+                  (e.target as HTMLImageElement).src = 'https://cdn-icons-png.flaticon.com/512/992/992717.png';
+                }}
+              />
+            </div>
             <span className="font-script text-honey text-2xl">Onzu's Kitchen</span>
           </div>
           <p className="font-display text-2xl text-cream">Login or <em className="text-honey not-italic">Sign Up</em></p>

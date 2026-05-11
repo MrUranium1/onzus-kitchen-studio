@@ -38,7 +38,7 @@ export default function Cart() {
   const getWALink = (orderId?: string) => {
     const items = cart.map(i => `• ${i.name} x${i.qty} = ৳${(i.price * i.qty).toLocaleString()}`).join('\n');
     const orderStr = orderId ? `Order ID: ${orderId}\n` : '';
-    const locationStr = location ? `Delivery To: ${location}\n` : '';
+    const locationStr = location ? `Delivery Address: ${location}\n` : '';
     const msg = encodeURIComponent(`Hi Onzu's Kitchen! I'd like to place an order 🧁\n\n${orderStr}${locationStr}${items}\n\nSubtotal: ৳${subtotal.toLocaleString()}\nTotal: ৳${total.toLocaleString()}\n\nPlease confirm availability. Thank you!`);
     return `https://wa.me/8801719262956?text=${msg}`;
   };

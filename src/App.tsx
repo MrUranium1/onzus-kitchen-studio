@@ -14,6 +14,7 @@ import Gallery from './pages/Gallery';
 import Contact from './pages/Contact';
 import Cart from './pages/Cart';
 import MyOrders from './pages/MyOrders';
+import MyAccount from './pages/MyAccount';
 import AdminLogin from './pages/AdminLogin';
 import AdminDashboard from './pages/AdminDashboard';
 import AdminRoute from './components/AdminRoute';
@@ -32,6 +33,7 @@ export default function App() {
               <Route path="contact" element={<Contact />} />
               <Route path="cart" element={<Cart />} />
               <Route path="orders" element={<MyOrders />} />
+              <Route path="account" element={<MyAccount />} />
               
               {/* Admin Routes inside Layout */}
               <Route path="admin" element={<AdminLogin />} />

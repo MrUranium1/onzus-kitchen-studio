@@ -54,7 +54,8 @@ export default function AdminDashboard() {
     category: 'Cakes',
     img: '',
     shortDesc: '',
-    featured: false
+    featured: false,
+    isSpecial: false
   });
 
   // Manual Order Form State
@@ -64,7 +65,7 @@ export default function AdminDashboard() {
     phoneNumber: '',
     items: [] as any[],
     totalAmount: '',
-    location: 'Dhanmondi, Dhaka',
+    location: 'Kazipara, Mirpur, Dhaka 1216, Bangladesh',
   });
 
   useEffect(() => {
@@ -73,7 +74,7 @@ export default function AdminDashboard() {
 
   const fetchItems = async () => {
     const items = await getProducts();
-    if (items.length === 0 && user && (isAdmin || ['hossainmehir2006@gmail.com', 'onzu080@gmail.com'].includes(user.email || ''))) {
+    if (items.length === 0 && user && (isAdmin || ['hossainmehir2006@gmail.com', 'onzu080@gmail.com'].includes(user.email?.toLowerCase() || ''))) {
       // Auto-seed if empty for admin
       for (const p of PRODUCTS) {
         await createProduct({ ...p, featured: [1,4,8,14].includes(p.id) });
@@ -92,7 +93,7 @@ export default function AdminDashboard() {
 
   const fetchCuration = async () => {
     const items = await getCurationItems();
-    if (items.length === 0 && user && (isAdmin || ['hossainmehir2006@gmail.com', 'onzu080@gmail.com'].includes(user.email || ''))) {
+    if (items.length === 0 && user && (isAdmin || ['hossainmehir2006@gmail.com', 'onzu080@gmail.com'].includes(user.email?.toLowerCase() || ''))) {
       const defaultBanners = [
         { imageUrl: 'https://images.unsplash.com/photo-1558961363-fa8fdf82db35?w=1920&q=80', title: "Onzu's Kitchen", subtitle: "Artisan Breads", order: 0 },
         { imageUrl: 'https://images.unsplash.com/photo-1578985545062-69928b1d9587?w=1920&q=80', title: "Sweet Delights", subtitle: "Custom Cakes", order: 1 }
@@ -114,7 +115,7 @@ export default function AdminDashboard() {
   };
 
   useEffect(() => {
-    if (user && (isAdmin || ['hossainmehir2006@gmail.com', 'onzu080@gmail.com'].includes(user.email || ''))) {
+    if (user && (isAdmin || ['hossainmehir2006@gmail.com', 'onzu080@gmail.com'].includes(user.email?.toLowerCase() || ''))) {
       refreshData();
     }
   }, [user, isAdmin]);
@@ -127,7 +128,8 @@ export default function AdminDashboard() {
         category: editingItem.category.charAt(0).toUpperCase() + editingItem.category.slice(1),
         img: editingItem.img,
         shortDesc: editingItem.shortDesc,
-        featured: !!editingItem.featured
+        featured: !!editingItem.featured,
+        isSpecial: editingItem.ribbon === 'SPECIAL'
       });
       setImagePreview(editingItem.img);
       setIsAddingItem(true);
@@ -138,7 +140,8 @@ export default function AdminDashboard() {
         category: 'Cakes',
         img: '',
         shortDesc: '',
-        featured: false
+        featured: false,
+        isSpecial: false
       });
       setImagePreview(null);
       setImageFile(null);
@@ -216,7 +219,7 @@ export default function AdminDashboard() {
     // Update orders in the full menu items list
     for (let i = 0; i < newFeatured.length; i++) {
       const product = newFeatured[i];
-      await updateProduct(product.id, { featuredOrder: i });
+      await updateProduct(product.id, { ...product, featuredOrder: i });
     }
     await fetchItems();
   };
@@ -348,8 +351,14 @@ export default function AdminDashboard() {
         longDesc: editingItem?.longDesc || formData.shortDesc || 'Freshly baked with love using premium ingredients.',
         rating: editingItem?.rating || 5,
         reviews: editingItem?.reviews || Math.floor(Math.random() * 20) + 5,
-        featured: formData.featured
+        featured: formData.featured,
+        ribbon: formData.isSpecial ? 'SPECIAL' : (editingItem?.ribbon === 'SPECIAL' ? '' : (editingItem?.ribbon || ''))
       };
+
+      // Ensure ribbon is never undefined if it was special
+      if (!formData.isSpecial && editingItem?.ribbon === 'SPECIAL') {
+        productData.ribbon = '';
+      }
 
       if (editingItem) {
         await updateProduct(editingItem.id, productData);
@@ -362,14 +371,17 @@ export default function AdminDashboard() {
       
       // Delay closing to show success
       setTimeout(async () => {
-        await fetchItems();
+        // Clear states before fetching to prevent stale data UI flashes
         setIsAddingItem(false);
         setEditingItem(null);
-        setFormData({ name: '', price: '', category: 'Cakes', img: '', shortDesc: '', featured: false });
+        setFormData({ name: '', price: '', category: 'Cakes', img: '', shortDesc: '', featured: false, isSpecial: false });
         setImageFile(null);
         setImagePreview(null);
         setSuccessMessage('');
         setUploadProgress(0);
+
+        // Fetch fresh data
+        await fetchItems();
       }, 1500);
 
     } catch (error: any) {
@@ -408,7 +420,7 @@ export default function AdminDashboard() {
       });
       await fetchOrders();
       setIsAddingOrder(false);
-      setOrderFormData({ userId: 'manual-admin', customerName: 'Phone Order', phoneNumber: '', items: [], totalAmount: '', location: 'Dhanmondi, Dhaka' });
+      setOrderFormData({ userId: 'manual-admin', customerName: 'Phone Order', phoneNumber: '', items: [], totalAmount: '', location: 'Kazipara, Mirpur, Dhaka 1216, Bangladesh' });
     } catch (error) {
       alert('Failed to create order');
     }
@@ -426,7 +438,7 @@ export default function AdminDashboard() {
         updateData.featuredOrder = maxOrder + 1;
       }
 
-      await updateProduct(product.id, updateData);
+      await updateProduct(product.id, { ...product, ...updateData });
       setMenuItems(menuItems.map(item => 
         item.id === product.id ? { ...item, ...updateData } : item
       ));
@@ -808,6 +820,7 @@ export default function AdminDashboard() {
                       <div className="flex flex-wrap gap-2">
                          <span className="px-2.5 py-1 rounded-lg bg-green-50 text-green-600 text-[9px] font-bold uppercase tracking-widest border border-green-100">Live</span>
                          {item.featured && <span className="px-2.5 py-1 rounded-lg bg-orange-50 text-orange-600 text-[9px] font-bold uppercase tracking-widest border border-orange-100">Featured</span>}
+                         {item.ribbon === 'SPECIAL' && <span className="px-2.5 py-1 rounded-lg bg-purple-50 text-purple-600 text-[9px] font-bold uppercase tracking-widest border border-purple-100">Special</span>}
                       </div>
                     </div>
                   </div>
@@ -885,7 +898,7 @@ export default function AdminDashboard() {
                          <tr className="bg-cream/30 text-[10px] font-bold text-mocha/40 uppercase tracking-[0.2em]">
                             <th className="px-10 py-6">ID & Status</th>
                             <th className="px-10 py-6">Customer Profile</th>
-                            <th className="px-10 py-6">Delivery Path</th>
+                            <th className="px-10 py-6">Delivery Address</th>
                             <th className="px-10 py-6 text-right">Summary</th>
                          </tr>
                       </thead>
@@ -1104,7 +1117,8 @@ export default function AdminDashboard() {
                             </div>
                             <div className="space-y-1">
                                <label className="text-[9px] font-bold text-mocha/40 uppercase tracking-widest ml-1">Settings</label>
-                               <div className="flex items-center h-9 px-2 bg-cream/30 border border-biscuit rounded-xl gap-2">
+                                <div className="flex flex-col gap-2 p-2 bg-cream/30 border border-biscuit rounded-xl">
+                                   <div className="flex items-center gap-2">
                                   <input 
                                     type="checkbox" 
                                     id="featured"
@@ -1112,10 +1126,21 @@ export default function AdminDashboard() {
                                     checked={formData.featured}
                                     onChange={e => setFormData({...formData, featured: e.target.checked})}
                                   />
-                                  <label htmlFor="featured" className="text-[10px] font-bold text-mocha/60 cursor-pointer select-none">Featured Item</label>
-                               </div>
-                            </div>
-                         </div>
+                                      <label htmlFor="featured" className="text-[10px] font-bold text-mocha/60 cursor-pointer select-none">Featured Item</label>
+                                   </div>
+                                   <div className="flex items-center gap-2">
+                                      <input 
+                                        type="checkbox" 
+                                        id="isSpecial"
+                                        className="w-4 h-4 rounded border-biscuit text-rust focus:ring-rust"
+                                        checked={formData.isSpecial}
+                                        onChange={e => setFormData({...formData, isSpecial: e.target.checked})}
+                                      />
+                                      <label htmlFor="isSpecial" className="text-[10px] font-bold text-mocha/60 cursor-pointer select-none">Today's Special</label>
+                                   </div>
+                                </div>
+                             </div>
+                          </div>
 
                          <div className="space-y-1">
                             <label className="text-[9px] font-bold text-mocha/40 uppercase tracking-widest ml-1">Image Representation</label>
@@ -1243,7 +1268,7 @@ export default function AdminDashboard() {
                       />
                    </div>
                    <div className="space-y-1.5">
-                      <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">Delivery Location</label>
+                      <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest ml-1">Delivery Address</label>
                       <textarea 
                         rows={3} 
                         required

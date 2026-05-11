@@ -9,15 +9,25 @@ export default function Footer() {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-10 mb-10">
           {/* Brand */}
           <div className="md:col-span-2">
-            <div className="flex items-center gap-2 mb-4">
-              <span className="text-2xl">🧁</span>
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-12 h-12 rounded-full overflow-hidden bg-cream flex items-center justify-center shadow-sm border-2 border-honey/20">
+                <img 
+                  src="https://scontent.fdac33-1.fna.fbcdn.net/v/t39.30808-6/470977332_122104213982660798_3500586346432379768_n.jpg?_nc_cat=106&ccb=1-7&_nc_sid=53a332&_nc_ohc=WNahI8lZD3IQ7kNvwHfn8IV&_nc_oc=AdoCQINqI7ll1YKgAVLroZeXi9nDJTDKt613UvvO7bkRGk5ZJcRhluxHqV6ahQapk8I&_nc_zt=23&_nc_ht=scontent.fdac33-1.fna&_nc_gid=NZnrTgTHNuYinWR8CwCHuw&_nc_ss=7b2a8&oh=00_Af5Fx-X_tMIQBkB61uwo5H6VMB_up7ou19E89Ubs5DI-Iw&oe=6A073C92" 
+                  alt="Onzu's Kitchen Logo" 
+                  className="w-full h-full object-cover"
+                  referrerPolicy="no-referrer"
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).src = 'https://cdn-icons-png.flaticon.com/512/992/992717.png';
+                  }}
+                />
+              </div>
               <span className="font-script text-2xl text-honey">Onzu's Kitchen</span>
             </div>
             <p className="font-body text-biscuit/60 text-sm leading-relaxed mb-5 max-w-xs">
               A cozy home bakery in Dhaka, crafting fresh baked goods daily with premium ingredients and family recipes passed down with love.
             </p>
             <div className="flex gap-3">
-              <a href="#" className="w-9 h-9 bg-mocha hover:bg-caramel rounded-xl flex items-center justify-center transition-colors">
+              <a href="https://www.facebook.com/onzuskitchen" target="_blank" rel="noreferrer" className="w-9 h-9 bg-mocha hover:bg-caramel rounded-xl flex items-center justify-center transition-colors">
                 <Facebook className="w-4 h-4" />
               </a>
               <a href="#" className="w-9 h-9 bg-mocha hover:bg-caramel rounded-xl flex items-center justify-center transition-colors">
@@ -48,7 +58,7 @@ export default function Footer() {
             <ul className="space-y-3 font-body text-sm text-biscuit/60">
               <li className="flex items-start gap-2">
                 <MapPin className="w-4 h-4 mt-0.5 shrink-0" />
-                <span>Mohammadpur, Dhaka 1207, Bangladesh</span>
+                <span>Kazipara, Mirpur, Dhaka 1216, Bangladesh</span>
               </li>
               <li className="flex items-center gap-2">
                 <Phone className="w-4 h-4 shrink-0" />

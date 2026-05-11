@@ -7,6 +7,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '../lib/utils';
 import { getProducts } from '../services/productService';
 import { getCurationItems, CurationItem } from '../services/curationService';
+import ProductModal from '../components/ProductModal';
 
 export default function Home() {
   const { addToCart } = useCart();
@@ -15,6 +16,7 @@ export default function Home() {
   const [curationItems, setCurationItems] = useState<CurationItem[]>([]);
   const [activeCurationIdx, setActiveCurationIdx] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
 
   useEffect(() => {
     if (curationItems.length > 1) {
@@ -39,17 +41,18 @@ export default function Home() {
           .sort((a, b) => (a.featuredOrder || 0) - (b.featuredOrder || 0));
         
         // If DB is empty, use initial static products as a bridge
+        // OR if nothing is marked as featured, use a few defaults
         if (allProducts.length === 0) {
           featured = PRODUCTS.filter(p => [1,4,8,14].includes(p.id));
+        } else if (featured.length === 0) {
+          // Show first 4 items as featured if none are explicitly marked
+          featured = allProducts.slice(0, 4);
         }
         
         setFeaturedProducts(featured);
 
-        // Filter special category items
-        let specials = allProducts.filter(p => 
-          p.category?.toLowerCase() === 'specials' || 
-          p.category?.toLowerCase() === 'special'
-        );
+        // Only show items explicitly marked with the SPECIAL ribbon
+        let specials = allProducts.filter(p => p.ribbon === 'SPECIAL');
 
         if (allProducts.length === 0) {
           specials = PRODUCTS.filter(p => p.ribbon === 'SPECIAL');
@@ -64,19 +67,14 @@ export default function Home() {
       }
     };
     fetchHomeContent();
-
-    const reveals = document.querySelectorAll('.reveal');
-
-    const observer = new IntersectionObserver((entries) => {
-      entries.forEach(entry => {
-        if (entry.isIntersecting) {
-          entry.target.classList.add('visible');
-        }
-      });
-    }, { threshold: 0.1 });
-    reveals.forEach(el => observer.observe(el));
-    return () => observer.disconnect();
   }, []);
+
+  const revealProps = {
+    initial: { opacity: 0, y: 30 },
+    whileInView: { opacity: 1, y: 0 },
+    viewport: { once: true, margin: "-100px" },
+    transition: { duration: 0.6 }
+  };
 
   // Remove: const featuredProducts = PRODUCTS.slice(0, 6);
 
@@ -184,7 +182,10 @@ export default function Home() {
       {/* Specialties */}
       <section className="py-20 px-4 bg-cream">
         <div className="max-w-7xl mx-auto">
-          <div className="text-center mb-12 reveal">
+          <motion.div 
+            {...revealProps}
+            className="text-center mb-12"
+          >
             <p className="font-script text-caramel text-xl mb-2">Our Specialties</p>
             <h2 className="font-display text-4xl md:text-5xl text-espresso mb-4">Signature <em>Baked Goods</em></h2>
             <p className="text-mocha/70 font-body max-w-xl mx-auto leading-relaxed">
@@ -195,7 +196,7 @@ export default function Home() {
               <span className="text-caramel text-xl">✦</span>
               <div className="h-px w-16 bg-caramel/40"></div>
             </div>
-          </div>
+          </motion.div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
             {loading ? (
@@ -204,10 +205,16 @@ export default function Home() {
               ))
             ) : featuredProducts.length > 0 ? (
               featuredProducts.map((product) => (
-                <div key={product.id} className="product-card bg-white rounded-3xl overflow-hidden shadow-md relative reveal">
+                <motion.div 
+                  key={product.id} 
+                  {...revealProps}
+                  className="product-card bg-white rounded-3xl overflow-hidden shadow-md relative cursor-pointer group"
+                  onClick={() => setSelectedProduct(product)}
+                >
                   {product.ribbon && <div className="ribbon">{product.ribbon}</div>}
-                  <div className="overflow-hidden h-56">
-                    <img src={product.img} alt={product.name} className="w-full h-full object-cover"/>
+                  <div className="overflow-hidden h-56 relative">
+                    <img src={product.img} alt={product.name} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"/>
+                    <div className="absolute inset-0 bg-black/5 opacity-0 group-hover:opacity-100 transition-opacity"></div>
                   </div>
                   <div className="p-5">
                     <div className="flex justify-between items-start mb-2">
@@ -226,13 +233,13 @@ export default function Home() {
                       <span className="text-mocha/50 text-xs font-body ml-1">({product.reviews})</span>
                     </div>
                     <button 
-                      onClick={() => addToCart(product)}
+                      onClick={(e) => { e.stopPropagation(); addToCart(product); }}
                       className="w-full bg-espresso hover:bg-mocha text-cream font-bold text-sm py-3 rounded-xl font-body tracking-wide transition-all active:scale-95"
                     >
                       + Add to Cart
                     </button>
                   </div>
-                </div>
+                </motion.div>
               ))
             ) : (
               <div className="col-span-full text-center py-12 bg-white rounded-3xl border border-dashed border-biscuit">
@@ -241,19 +248,25 @@ export default function Home() {
             )}
           </div>
 
-          <div className="text-center mt-12 reveal">
+          <motion.div 
+            {...revealProps}
+            className="text-center mt-12"
+          >
             <Link to="/menu" className="inline-flex items-center gap-2 bg-caramel hover:bg-mocha text-cream font-bold text-sm px-10 py-4 rounded-full font-body tracking-wide transition-all duration-200 hover:-translate-y-1 shadow-lg hover:shadow-xl">
               View Full Menu
               <ChevronRight className="w-4 h-4" />
             </Link>
-          </div>
+          </motion.div>
         </div>
       </section>
 
       {/* Today's Specials */}
       <section className="py-20 px-4 bg-honey/5 border-y border-honey/20">
         <div className="max-w-7xl mx-auto">
-          <div className="text-center mb-12 reveal">
+          <motion.div 
+            {...revealProps}
+            className="text-center mb-12"
+          >
             <p className="font-script text-rust text-xl mb-2">Limited Time Offers</p>
             <h2 className="font-display text-4xl md:text-5xl text-espresso mb-4">Today's <em>Specials</em></h2>
             <p className="text-mocha/70 font-body max-w-xl mx-auto leading-relaxed">
@@ -264,7 +277,7 @@ export default function Home() {
               <Sparkles className="text-rust w-5 h-5" />
               <div className="h-px w-16 bg-rust/30"></div>
             </div>
-          </div>
+          </motion.div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
             {loading ? (
@@ -273,7 +286,12 @@ export default function Home() {
               ))
             ) : specialProducts.length > 0 ? (
               specialProducts.map((product) => (
-                <div key={product.id} className="product-card bg-white rounded-3xl overflow-hidden shadow-md relative reveal group">
+                <motion.div 
+                  key={product.id} 
+                  {...revealProps}
+                  className="product-card bg-white rounded-3xl overflow-hidden shadow-md relative group cursor-pointer"
+                  onClick={() => setSelectedProduct(product)}
+                >
                   <div className="absolute top-4 left-4 z-10 bg-rust text-cream text-[10px] font-bold px-3 py-1 rounded-full shadow-lg uppercase tracking-widest">
                     Special
                   </div>
@@ -300,14 +318,14 @@ export default function Home() {
                       <span className="text-mocha/40 text-[10px] font-bold uppercase tracking-wider">Top Rated</span>
                     </div>
                     <button 
-                      onClick={() => addToCart(product)}
+                      onClick={(e) => { e.stopPropagation(); addToCart(product); }}
                       className="w-full bg-caramel hover:bg-rust text-cream font-bold text-sm py-3.5 rounded-xl font-body tracking-widest uppercase transition-all shadow-md active:scale-95 flex items-center justify-center gap-2"
                     >
                       <Sparkles className="w-4 h-4" />
                       Add to Cart
                     </button>
                   </div>
-                </div>
+                </motion.div>
               ))
             ) : (
               <div className="col-span-full text-center py-16 bg-honey/10 rounded-[3rem] border-2 border-dashed border-honey/30">
@@ -328,7 +346,10 @@ export default function Home() {
         <div className="absolute bottom-0 left-0 w-64 h-64 bg-honey/10 rounded-full blur-3xl pointer-events-none"></div>
 
         <div className="max-w-7xl mx-auto relative z-10">
-          <div className="text-center mb-14 reveal">
+          <motion.div 
+            {...revealProps}
+            className="text-center mb-14"
+          >
             <p className="font-script text-honey text-xl mb-2">Why Families Love Us</p>
             <h2 className="font-display text-4xl md:text-5xl text-cream mb-4">The <em>Onzu's Kitchen</em> Promise</h2>
             <div className="flex items-center justify-center gap-3 mt-4">
@@ -336,7 +357,7 @@ export default function Home() {
               <span className="text-honey text-xl">✦</span>
               <div className="h-px w-16 bg-caramel/60"></div>
             </div>
-          </div>
+          </motion.div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
             {[
@@ -345,17 +366,28 @@ export default function Home() {
               { icon: ShieldCheck, title: 'Hygienic & Safe', desc: 'We follow strict food-safety practices. Packaging is clean, sealed, and tamper-proof.' },
               { icon: Clock, title: 'Custom Orders', desc: 'Birthdays, weddings, or gifting — we take custom orders with personalised messages.' }
             ].map((p, i) => (
-              <div key={i} className="bg-mocha/40 border border-caramel/20 rounded-3xl p-6 text-center reveal hover:-translate-y-2 transition-transform duration-300">
+              <motion.div 
+                key={i} 
+                {...revealProps}
+                transition={{ duration: 0.6, delay: i * 0.1 }}
+                className="bg-mocha/40 border border-caramel/20 rounded-3xl p-6 text-center hover:-translate-y-2 transition-transform duration-300"
+              >
                 <div className="w-14 h-14 bg-honey/20 rounded-2xl flex items-center justify-center mx-auto mb-4">
                   <p.icon className="w-7 h-7 text-honey" />
                 </div>
                 <h3 className="font-display text-xl text-cream mb-2">{p.title}</h3>
                 <p className="text-biscuit/70 text-sm font-body leading-relaxed">{p.desc}</p>
-              </div>
+              </motion.div>
             ))}
           </div>
         </div>
       </section>
+
+      <ProductModal 
+        product={selectedProduct}
+        onClose={() => setSelectedProduct(null)}
+        onAddToCart={addToCart}
+      />
     </div>
   );
 }

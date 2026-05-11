@@ -14,7 +14,7 @@ export default function Contact() {
 
   const faqs = [
     { q: 'How far in advance should I order a custom cake?', a: 'We recommend ordering custom cakes at least 3–5 days in advance. For elaborate designs or wedding cakes, please give us 1–2 weeks notice. Contact us via WhatsApp for urgent orders.' },
-    { q: 'Do you offer delivery across Dhaka?', a: 'Yes! We deliver across Dhaka via trusted partners. charges vary by location. Free delivery is available on orders above ৳1,000 within Mohammadpur.' },
+    { q: 'Do you offer delivery across Dhaka?', a: 'Yes! We deliver across Dhaka via trusted partners. charges vary by location. Free delivery is available on orders above ৳1,000 within Kazipara, Mirpur, Dhaka 1216, Bangladesh.' },
     { q: 'Can I get gluten-free or sugar-free options?', a: "We offer selected gluten-free and reduced-sugar options on request. Please mention your requirements when ordering and we'll do our best to accommodate you." },
     { q: 'What payment methods do you accept?', a: 'We accept bKash, Nagad, Rocket, bank transfer, and cash on delivery for local orders. A 50% deposit is required for larger orders.' }
   ];
@@ -34,7 +34,7 @@ export default function Contact() {
         {/* Info Column */}
         <div className="md:col-span-2 space-y-6">
           <div className="grid grid-cols-1 gap-4">
-            <ContactInfoCard icon={<MapPin className="text-caramel" />} title="Location" content="Mohammadpur, Dhaka 1207, Bangladesh" />
+            <ContactInfoCard icon={<MapPin className="text-caramel" />} title="Location" content="Kazipara, Mirpur, Dhaka 1216, Bangladesh" />
             <ContactInfoCard 
               icon={<MessageCircle className="text-green-500" />} 
               title="WhatsApp Orders" 
@@ -62,7 +62,7 @@ export default function Contact() {
           <div className="testi-card rounded-3xl p-6">
             <h3 className="font-display text-lg text-espresso mb-4">Follow Us</h3>
             <div className="flex gap-3">
-              <a href="#" className="flex-1 bg-[#1877F2] hover:opacity-90 text-white rounded-2xl py-3 text-center text-xs font-bold font-body transition-all flex items-center justify-center gap-2">
+              <a href="https://www.facebook.com/onzuskitchen" target="_blank" rel="noreferrer" className="flex-1 bg-[#1877F2] hover:opacity-90 text-white rounded-2xl py-3 text-center text-xs font-bold font-body transition-all flex items-center justify-center gap-2">
                 <Facebook className="w-4 h-4" /> Facebook
               </a>
               <a href="#" className="flex-1 bg-gradient-to-br from-[#833AB4] via-[#FD1D1D] to-[#FCB045] hover:opacity-90 text-white rounded-2xl py-3 text-center text-xs font-bold font-body transition-all flex items-center justify-center gap-2">
