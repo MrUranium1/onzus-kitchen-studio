@@ -40,14 +40,14 @@ service cloud.firestore {
 
     // --- Product Validation ---
     function isValidProduct(data) {
-      return data.keys().hasAll(['id', 'name', 'price', 'img', 'category', 'shortDesc', 'longDesc', 'rating', 'reviews'])
+      return data.keys().hasAll(['id', 'name', 'price', 'img', 'category', 'shortDescription', 'longDescription', 'rating', 'reviews'])
         && (data.id is number || data.id is string)
         && data.name is string && data.name.size() > 0 && data.name.size() <= 100
         && data.price is number && data.price >= 0
         && data.img is string && data.img.size() <= 500
         && data.category is string && data.category.size() <= 100
-        && data.shortDesc is string && data.shortDesc.size() <= 500
-        && data.longDesc is string && data.longDesc.size() <= 5000
+        && data.shortDescription is string && data.shortDescription.size() <= 500
+        && data.longDescription is string && data.longDescription.size() <= 5000
         && data.rating is number && data.rating >= 0 && data.rating <= 5
         && data.reviews is number && data.reviews >= 0
         && (!data.keys().hasAny(['ribbon']) || data.ribbon is string)
@@ -70,10 +70,9 @@ service cloud.firestore {
     }
 
     function isValidAddress(data) {
-      return data.keys().hasAll(['label', 'fullAddress', 'phoneNumber', 'isDefault'])
+      return data.keys().hasAll(['label', 'fullAddress', 'isDefault'])
         && data.label in ['Home', 'Work', 'Other']
         && data.fullAddress is string && data.fullAddress.size() > 0 && data.fullAddress.size() <= 2000
-        && data.phoneNumber is string && data.phoneNumber.size() > 0 && data.phoneNumber.size() <= 20
         && data.isDefault is bool
         && (!data.keys().hasAny(['id']) || data.id is string)
         && (!data.keys().hasAny(['landmark']) || data.landmark is string)
@@ -135,6 +134,10 @@ service cloud.firestore {
       allow delete: if isAdmin();
     }
 
+    match /otps/{email} {
+      allow read, write: if false; // Only server-side access via Admin SDK
+    }
+
     match /products/{productId} {
       allow read: if true; // Publicly readable menu
       
@@ -157,19 +160,18 @@ service cloud.firestore {
     }
 
     match /users/{userId} {
-      allow get: if isOwner(userId);
-      allow list: if isOwner(userId); // Explicitly check resource.data implicitly by match variable
+      allow get, list: if isSignedIn() && (isOwner(userId) || isAdmin());
       
-      allow create: if isOwner(userId) && isValidUser(incoming()) && incoming().role == 'user';
+      allow create: if isOwner(userId) && incoming().role == 'user';
       
-      allow update: if isOwner(userId) && isValidUser(incoming()) 
-        && incoming().role == existing().role // Prevent role escalation
-        && incoming().createdAt == existing().createdAt; // Immutable field
+      allow update: if isOwner(userId) && (
+        incoming().role == (existing().keys().hasAny(['role']) ? existing().role : 'user')
+      );
         
-      allow delete: if isOwner(userId);
+      allow delete: if isOwner(userId) || isAdmin();
 
       match /addresses/{addressId} {
-        allow read: if isOwner(userId);
+        allow read: if isOwner(userId) || isAdmin();
         allow create, update: if isOwner(userId) && isValidAddress(incoming());
         allow delete: if isOwner(userId);
       }

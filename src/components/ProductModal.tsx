@@ -57,7 +57,7 @@ export default function ProductModal({ product, onClose, onAddToCart }: ProductM
                   
                   <div className="flex-grow">
                     <p className="text-mocha/80 leading-relaxed font-body text-sm mb-6">
-                      {product.longDesc || "Freshly baked with love using our exclusive home recipes. Crafted with premium ingredients to ensure the perfect taste and texture."}
+                      {product.longDescription || "Freshly baked with love using our exclusive home recipes. Crafted with premium ingredients to ensure the perfect taste and texture."}
                     </p>
                     
                     {product.ribbon && (

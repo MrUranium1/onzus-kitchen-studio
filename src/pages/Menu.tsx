@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useCart } from '../context/CartContext';
 import { PRODUCTS, Product } from '../data/products';
 import { getProducts, createProduct } from '../services/productService';
-import { Star, Search, Filter, Loader2 } from 'lucide-react';
+import { Star, Search, Filter, Loader2, ShoppingBag } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { motion } from 'motion/react';
 import ProductModal from '../components/ProductModal';
@@ -45,6 +45,7 @@ export default function Menu() {
   const categories = [
     { id: 'all', label: 'All Items' },
     { id: 'cakes', label: 'Cakes' },
+    { id: 'pitha', label: 'Pitha' },
     { id: 'pastries', label: 'Pastries' },
     { id: 'cookies', label: 'Cookies' },
     { id: 'breads', label: 'Breads' },
@@ -55,7 +56,7 @@ export default function Menu() {
   const filteredProducts = menuItems.filter(p => {
     const matchesCategory = category === 'all' || p.category.includes(category);
     const matchesSearch = p.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                         p.shortDesc.toLowerCase().includes(searchTerm.toLowerCase());
+                         (p.shortDescription || '').toLowerCase().includes(searchTerm.toLowerCase());
     return matchesCategory && matchesSearch;
   });
 
@@ -124,7 +125,7 @@ export default function Menu() {
                     <h3 className="font-display text-lg text-espresso leading-tight">{product.name}</h3>
                     <span className="text-rust font-bold font-body ml-2 shrink-0">৳{product.price}</span>
                   </div>
-                  <p className="text-mocha/60 text-xs font-body mb-3">{product.shortDesc}</p>
+                  <p className="text-mocha/60 text-xs font-body mb-3 line-clamp-2">{product.shortDescription}</p>
                   <div className="flex gap-0.5 mb-4">
                     {[...Array(5)].map((_, i) => (
                       <Star key={i} className={cn("w-3 h-3 fill-current", i >= product.rating ? "text-gray-200 fill-none" : "text-yellow-400 fill-yellow-400")} />
@@ -143,7 +144,9 @@ export default function Menu() {
           </div>
         ) : (
           <div className="text-center py-20">
-            <p className="text-5xl mb-4">🍽</p>
+            <div className="w-20 h-20 bg-biscuit/40 rounded-full flex items-center justify-center mx-auto mb-4">
+              <ShoppingBag className="w-10 h-10 text-mocha/30" />
+            </div>
             <h3 className="font-display text-2xl text-espresso mb-2">No items found</h3>
             <button 
               onClick={() => { setCategory('all'); setSearchTerm(''); }}

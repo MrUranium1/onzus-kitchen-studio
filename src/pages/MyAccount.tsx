@@ -53,7 +53,6 @@ export default function MyAccount() {
   // Address Form State
   const [addressLabel, setAddressLabel] = useState<'Home' | 'Work' | 'Other'>('Home');
   const [addressFull, setAddressFull] = useState('');
-  const [addressPhone, setAddressPhone] = useState('');
   const [addressLandmark, setAddressLandmark] = useState('');
   const [addressIsDefault, setAddressIsDefault] = useState(false);
 
@@ -188,14 +187,12 @@ export default function MyAccount() {
       setEditingAddress(addr);
       setAddressLabel(addr.label);
       setAddressFull(addr.fullAddress);
-      setAddressPhone(addr.phoneNumber);
       setAddressLandmark(addr.landmark || '');
       setAddressIsDefault(addr.isDefault);
     } else {
       setEditingAddress(null);
       setAddressLabel('Home');
       setAddressFull('');
-      setAddressPhone(phone); // Default to profile phone
       setAddressLandmark('');
       setAddressIsDefault(addresses.length === 0); // Default if first address
     }
@@ -212,7 +209,6 @@ export default function MyAccount() {
       const addressData = {
         label: addressLabel,
         fullAddress: addressFull,
-        phoneNumber: addressPhone,
         landmark: addressLandmark,
         isDefault: addressIsDefault
       };
@@ -579,10 +575,7 @@ export default function MyAccount() {
                             <span className="bg-caramel text-white text-[9px] font-black px-2 py-0.5 rounded-full uppercase tracking-tighter">Default</span>
                           )}
                         </div>
-                        <p className="text-sm font-body text-mocha/80 mb-3 leading-relaxed min-h-[40px]">{addr.fullAddress}</p>
-                        <div className="flex items-center gap-2 text-xs font-body text-mocha/50 mb-6">
-                          <Phone className="w-3 h-3" /> {addr.phoneNumber}
-                        </div>
+                        <p className="text-sm font-body text-mocha/80 mb-6 leading-relaxed min-h-[40px]">{addr.fullAddress}</p>
                         
                           <div className="flex items-center gap-3 pt-4 border-t border-biscuit/20">
                             <button 
@@ -879,33 +872,17 @@ export default function MyAccount() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-1.5">
-                    <label className="text-[10px] font-bold text-mocha/40 uppercase tracking-widest pl-1">Phone Number *</label>
-                    <div className="relative">
-                      <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-biscuit" />
-                      <input 
-                        type="tel" 
-                        required
-                        className="w-full bg-white border-2 border-biscuit rounded-2xl pl-11 pr-4 py-3.5 text-sm outline-none focus:border-caramel transition-colors"
-                        placeholder="+880 1XXX..."
-                        value={addressPhone}
-                        onChange={(e) => setAddressPhone(e.target.value)}
-                      />
-                    </div>
-                  </div>
-                  <div className="space-y-1.5">
-                    <label className="text-[10px] font-bold text-mocha/40 uppercase tracking-widest pl-1">Landmark</label>
-                    <div className="relative">
-                      <Map className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-biscuit" />
-                      <input 
-                        type="text" 
-                        className="w-full bg-white border-2 border-biscuit rounded-2xl pl-11 pr-4 py-3.5 text-sm outline-none focus:border-caramel transition-colors"
-                        placeholder="Near XYZ School"
-                        value={addressLandmark}
-                        onChange={(e) => setAddressLandmark(e.target.value)}
-                      />
-                    </div>
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-bold text-mocha/40 uppercase tracking-widest pl-1">Landmark</label>
+                  <div className="relative">
+                    <Map className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-biscuit" />
+                    <input 
+                      type="text" 
+                      className="w-full bg-white border-2 border-biscuit rounded-2xl pl-11 pr-4 py-3.5 text-sm outline-none focus:border-caramel transition-colors"
+                      placeholder="Near XYZ School"
+                      value={addressLandmark}
+                      onChange={(e) => setAddressLandmark(e.target.value)}
+                    />
                   </div>
                 </div>
 

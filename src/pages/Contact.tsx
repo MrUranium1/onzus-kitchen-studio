@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Send, MapPin, Phone, Mail, Clock, Facebook, Instagram, MessageCircle, ChevronDown, ChevronUp, Loader2, LogIn } from 'lucide-react';
+import { Send, MapPin, Phone, Mail, Clock, Facebook, Instagram, MessageCircle, ChevronDown, ChevronUp, Loader2, LogIn, Sparkles } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '../lib/utils';
@@ -188,13 +188,13 @@ export default function Contact() {
                         />
                       </div>
                       <div className="space-y-1.5">
-                        <label className="block text-[10px] font-bold text-mocha uppercase tracking-widest pl-1">Phone Number (Read-only)</label>
+                        <label className="block text-[10px] font-bold text-mocha uppercase tracking-widest pl-1">Phone Number *</label>
                         <input 
                           type="tel" 
                           name="phone"
                           value={formData.phone}
-                          readOnly
-                          className="w-full bg-cream/10 border-2 border-biscuit rounded-2xl px-5 py-3.5 outline-none text-mocha/50 cursor-not-allowed" 
+                          onChange={handleChange}
+                          className="w-full bg-cream/30 border-2 border-biscuit rounded-2xl px-5 py-3.5 outline-none focus:border-caramel transition-all" 
                           placeholder="+880 1XXX-XXXXXX" 
                           required
                         />
@@ -273,7 +273,9 @@ export default function Contact() {
                   animate={{ opacity: 1, scale: 1 }}
                   className="flex flex-col items-center justify-center text-center h-full py-10"
                 >
-                  <div className="text-7xl mb-6">🎉</div>
+              <div className="w-20 h-20 bg-green-50 rounded-full flex items-center justify-center mx-auto mb-6 shadow-md border-2 border-green-100">
+                <Sparkles className="w-10 h-10 text-green-500" />
+              </div>
                   <h3 className="font-display text-3xl text-espresso mb-3">Message Sent!</h3>
                   <p className="font-body text-mocha/70 text-base mb-8 max-w-xs mx-auto">Thank you! We've received your enquiry and will get back to you within 2 hours during business hours.</p>
                   <button 

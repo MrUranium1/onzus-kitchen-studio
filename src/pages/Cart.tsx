@@ -43,7 +43,6 @@ export default function Cart() {
         if (defaultAddr) {
           setSelectedAddressId(defaultAddr.id);
           setLocation(defaultAddr.fullAddress);
-          setPhoneNumber(defaultAddr.phoneNumber);
         } else if (profile) {
           if (profile.phoneNumber && !phoneNumber) {
             setPhoneNumber(profile.phoneNumber);
@@ -60,7 +59,6 @@ export default function Cart() {
   const handleSelectAddress = (addr: SavedAddress) => {
     setSelectedAddressId(addr.id);
     setLocation(addr.fullAddress);
-    setPhoneNumber(addr.phoneNumber);
   };
 
   const handleManualEntry = () => {
@@ -84,7 +82,7 @@ export default function Cart() {
     const items = cart.map(i => `• ${i.name} x${i.qty} = ৳${(i.price * i.qty).toLocaleString()}`).join('\n');
     const orderStr = orderId ? `Order ID: ${orderId}\n` : '';
     const locationStr = location ? `Delivery Address: ${location}\n` : '';
-    const msg = encodeURIComponent(`Hi Onzu's Kitchen! I'd like to place an order 🧁\n\n${orderStr}${locationStr}${items}\n\nSubtotal: ৳${subtotal.toLocaleString()}\nTotal: ৳${total.toLocaleString()}\n\nPlease confirm availability. Thank you!`);
+    const msg = encodeURIComponent(`Hi Onzu's Kitchen! I'd like to place an order\n\n${orderStr}${locationStr}${items}\n\nSubtotal: ৳${subtotal.toLocaleString()}\nTotal: ৳${total.toLocaleString()}\n\nPlease confirm availability. Thank you!`);
     return `https://wa.me/8801719262956?text=${msg}`;
   };
 
@@ -106,7 +104,6 @@ export default function Cart() {
         await addAddress(user.uid, {
           label: addressLabel,
           fullAddress: location,
-          phoneNumber: phoneNumber,
           isDefault: addresses.length === 0
         });
       }
@@ -138,7 +135,7 @@ export default function Cart() {
            <div className="w-24 h-24 bg-biscuit/40 rounded-full flex items-center justify-center">
              <ShoppingBag className="w-12 h-12 text-mocha/30" />
            </div>
-           <div className="absolute -bottom-2 -right-2 w-8 h-8 bg-cream flex items-center justify-center rounded-full">🧁</div>
+           <div className="absolute -bottom-2 -right-2 w-8 h-8 bg-cream flex items-center justify-center rounded-full"></div>
         </div>
         <h2 className="font-display text-3xl text-espresso mb-3">Your cart is empty</h2>
         <p className="font-body text-mocha/60 text-base mb-10 max-w-xs mx-auto">Looks like you haven't added any of our delicious bakes yet.</p>
@@ -146,7 +143,7 @@ export default function Cart() {
           to="/menu" 
           className="bg-espresso text-cream font-bold text-sm px-10 py-4 rounded-full font-body tracking-wide transition-all shadow-lg active:scale-95 hover:bg-mocha"
         >
-          🧁 Browse Menu
+          Browse Menu
         </Link>
       </div>
     );
@@ -418,7 +415,7 @@ export default function Cart() {
               )}
               <div className="flex justify-between text-mocha/70">
                 <span>Delivery</span>
-                {deliveryFee === 0 ? <span className="text-green-600 font-bold">Free 🎉</span> : <span>৳{deliveryFee}</span>}
+                {deliveryFee === 0 ? <span className="text-green-600 font-bold">Free</span> : <span>৳{deliveryFee}</span>}
               </div>
               
               <div className="h-px bg-biscuit/60 my-4"></div>
@@ -469,7 +466,9 @@ export default function Cart() {
                className="bg-cream rounded-[2.5rem] shadow-2xl p-10 max-w-md w-full text-center border border-biscuit relative"
             >
               <button onClick={() => { setShowSuccessModal(false); clearCart(); }} className="absolute top-6 right-6 text-mocha/40 hover:text-espresso"><X className="w-6 h-6" /></button>
-              <div className="text-7xl mb-6">🎉</div>
+              <div className="text-7xl mb-6">
+                <Sparkles className="w-16 h-16 text-honey mx-auto" />
+              </div>
               <h2 className="font-display text-4xl text-espresso mb-4">Order Placed!</h2>
               {orderDetails && (
                 <p className="text-[10px] font-bold text-caramel uppercase tracking-[0.2em] mb-4">Order ID: {orderDetails.id}</p>

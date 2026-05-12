@@ -43,12 +43,12 @@ export default function Footer() {
           <div>
             <h4 className="font-display text-lg text-honey mb-4">Quick Links</h4>
             <ul className="space-y-2 font-body text-sm text-biscuit/60">
-              <li><Link to="/" className="hover:text-honey transition-colors">🏠 Home</Link></li>
-              <li><Link to="/menu" className="hover:text-honey transition-colors">🧁 Menu</Link></li>
-              <li><Link to="/about" className="hover:text-honey transition-colors">💛 About Us</Link></li>
-              <li><Link to="/gallery" className="hover:text-honey transition-colors">📸 Gallery</Link></li>
-              <li><Link to="/contact" className="hover:text-honey transition-colors">📞 Contact</Link></li>
-              <li><Link to="/cart" className="hover:text-honey transition-colors">🛒 Cart</Link></li>
+              <li><Link to="/" className="hover:text-honey transition-colors">Home</Link></li>
+              <li><Link to="/menu" className="hover:text-honey transition-colors">Menu</Link></li>
+              <li><Link to="/about" className="hover:text-honey transition-colors">About Us</Link></li>
+              <li><Link to="/gallery" className="hover:text-honey transition-colors">Gallery</Link></li>
+              <li><Link to="/contact" className="hover:text-honey transition-colors">Contact</Link></li>
+              <li><Link to="/cart" className="hover:text-honey transition-colors">Cart</Link></li>
             </ul>
           </div>
 

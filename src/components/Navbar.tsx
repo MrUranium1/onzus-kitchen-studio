@@ -124,30 +124,30 @@ export default function Navbar() {
                       <p className="font-bold font-body text-espresso text-sm truncate">{user.name}</p>
                       <p className="text-mocha/50 text-xs font-body truncate">{user.email}</p>
                     </div>
-                    <div className="py-2 text-sm font-bold text-mocha">
-                      <Link 
-                        to="/account" 
-                        onClick={() => setIsAccountDropdownOpen(false)}
-                        className="w-full text-left px-4 py-2.5 hover:bg-biscuit/60 transition-colors flex items-center gap-3"
-                      >
-                        👤 My Account
-                      </Link>
-                      <Link 
-                        to="/orders" 
-                        onClick={() => setIsAccountDropdownOpen(false)}
-                        className="w-full text-left px-4 py-2.5 hover:bg-biscuit/60 transition-colors flex items-center gap-3"
-                      >
-                        📦 My Orders
-                      </Link>
-                      <div className="border-t border-biscuit mt-1 pt-1">
-                        <button 
-                          onClick={() => { logout(); setIsAccountDropdownOpen(false); }}
-                          className="w-full text-left px-4 py-2.5 text-rust hover:bg-red-50 transition-colors flex items-center gap-3"
+                      <div className="py-2 text-sm font-bold text-mocha">
+                        <Link 
+                          to="/account" 
+                          onClick={() => setIsAccountDropdownOpen(false)}
+                          className="w-full text-left px-4 py-2.5 hover:bg-biscuit/60 transition-colors flex items-center gap-3"
                         >
-                          🚪 Logout
-                        </button>
+                          My Account
+                        </Link>
+                        <Link 
+                          to="/orders" 
+                          onClick={() => setIsAccountDropdownOpen(false)}
+                          className="w-full text-left px-4 py-2.5 hover:bg-biscuit/60 transition-colors flex items-center gap-3"
+                        >
+                          My Orders
+                        </Link>
+                        <div className="border-t border-biscuit mt-1 pt-1">
+                          <button 
+                            onClick={() => { logout(); setIsAccountDropdownOpen(false); }}
+                            className="w-full text-left px-4 py-2.5 text-rust hover:bg-red-50 transition-colors flex items-center gap-3"
+                          >
+                            Logout
+                          </button>
+                        </div>
                       </div>
-                    </div>
                   </div>
                 </>
               )}
@@ -189,14 +189,14 @@ export default function Navbar() {
                   onClick={() => setIsMobileMenuOpen(false)}
                   className="py-2 px-3 rounded-lg hover:bg-biscuit"
                 >
-                  👤 My Account
+                  My Account
                 </Link>
                 <Link 
                   to="/orders" 
                   onClick={() => setIsMobileMenuOpen(false)}
                   className="py-2 px-3 rounded-lg hover:bg-biscuit"
                 >
-                  📦 My Orders
+                  My Orders
                 </Link>
               </>
             )}

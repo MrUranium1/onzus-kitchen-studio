@@ -10,13 +10,13 @@
         "price": { "type": "number" },
         "img": { "type": "string", "format": "uri" },
         "category": { "type": "string" },
-        "shortDesc": { "type": "string" },
-        "longDesc": { "type": "string" },
+        "shortDescription": { "type": "string" },
+        "longDescription": { "type": "string" },
         "rating": { "type": "number" },
         "reviews": { "type": "number" },
         "ribbon": { "type": "string" }
       },
-      "required": ["id", "name", "price", "img", "category", "shortDesc", "longDesc", "rating", "reviews"]
+      "required": ["id", "name", "price", "img", "category", "shortDescription", "longDescription", "rating", "reviews"]
     },
     "User": {
       "title": "User",
@@ -85,14 +85,28 @@
         "id": { "type": "string" },
         "label": { "type": "string", "enum": ["Home", "Work", "Other"] },
         "fullAddress": { "type": "string" },
-        "phoneNumber": { "type": "string" },
         "landmark": { "type": "string" },
         "isDefault": { "type": "boolean" }
       },
-      "required": ["id", "label", "fullAddress", "phoneNumber", "isDefault"]
+      "required": ["id", "label", "fullAddress", "isDefault"]
+    },
+    "OTP": {
+      "title": "OTP",
+      "description": "Temporary verification code",
+      "type": "object",
+      "properties": {
+        "otp": { "type": "string" },
+        "expiresAt": { "type": "number" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["otp", "expiresAt"]
     }
   },
   "firestore": {
+    "/otps/{email}": {
+      "schema": "OTP",
+      "description": "Stores temporary 6-digit OTP codes for email verification."
+    },
     "/products/{productId}": {
       "schema": "Product",
       "description": "Collection of all menu items"

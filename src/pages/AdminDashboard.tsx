@@ -58,7 +58,8 @@ export default function AdminDashboard() {
     price: '',
     category: 'Cakes',
     img: '',
-    shortDesc: '',
+    shortDescription: '',
+    longDescription: '',
     featured: false,
     isSpecial: false
   });
@@ -82,7 +83,7 @@ export default function AdminDashboard() {
     if (items.length === 0 && user && (isAdmin || ['hossainmehir2006@gmail.com', 'onzu080@gmail.com'].includes(user.email?.toLowerCase() || ''))) {
       // Auto-seed if empty for admin
       for (const p of PRODUCTS) {
-        await createProduct({ ...p, featured: [1,4,8,14].includes(p.id) });
+        await createProduct({ ...p, featured: [1,4,8,14].includes(p.id as number) });
       }
       const newItems = await getProducts();
       setMenuItems(newItems);
@@ -137,7 +138,8 @@ export default function AdminDashboard() {
         price: editingItem.price.toString(),
         category: editingItem.category.charAt(0).toUpperCase() + editingItem.category.slice(1),
         img: editingItem.img,
-        shortDesc: editingItem.shortDesc,
+        shortDescription: editingItem.shortDescription || '',
+        longDescription: editingItem.longDescription || '',
         featured: !!editingItem.featured,
         isSpecial: editingItem.ribbon === 'SPECIAL'
       });
@@ -149,7 +151,8 @@ export default function AdminDashboard() {
         price: '',
         category: 'Cakes',
         img: '',
-        shortDesc: '',
+        shortDescription: '',
+        longDescription: '',
         featured: false,
         isSpecial: false
       });
@@ -357,8 +360,8 @@ export default function AdminDashboard() {
         price: Number(formData.price),
         category: formData.category.toLowerCase(),
         img: imageUrl || editingItem?.img || '',
-        shortDesc: formData.shortDesc || 'Delicious artisan bake.',
-        longDesc: editingItem?.longDesc || formData.shortDesc || 'Freshly baked with love using premium ingredients.',
+        shortDescription: formData.shortDescription || 'Delicious artisan bake.',
+        longDescription: formData.longDescription || formData.shortDescription || 'Freshly baked with love using premium ingredients.',
         rating: editingItem?.rating || 5,
         reviews: editingItem?.reviews || Math.floor(Math.random() * 20) + 5,
         featured: formData.featured,
@@ -583,15 +586,14 @@ export default function AdminDashboard() {
               </div>
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
                 {[
-                  { status: 'pending', label: 'Pending', count: statusCounts.pending, color: 'bg-amber-50 text-amber-600 border-amber-100', icon: '⏳' },
-                  { status: 'preparing', label: 'Prepared', count: statusCounts.preparing, color: 'bg-blue-50 text-blue-600 border-blue-100', icon: '👩‍🍳' },
-                  { status: 'ready', label: 'Ready', count: statusCounts.ready, color: 'bg-purple-50 text-purple-600 border-purple-100', icon: '✨' },
-                  { status: 'delivered', label: 'Delivered', count: statusCounts.delivered, color: 'bg-green-50 text-green-600 border-green-100', icon: '✅' },
-                  { status: 'cancelled', label: 'Canceled', count: statusCounts.cancelled, color: 'bg-red-50 text-red-600 border-red-100', icon: '❌' },
+                  { status: 'pending', label: 'Pending', count: statusCounts.pending, color: 'bg-amber-50 text-amber-600 border-amber-100' },
+                  { status: 'preparing', label: 'Prepared', count: statusCounts.preparing, color: 'bg-blue-50 text-blue-600 border-blue-100' },
+                  { status: 'ready', label: 'Ready', count: statusCounts.ready, color: 'bg-purple-50 text-purple-600 border-purple-100' },
+                  { status: 'delivered', label: 'Delivered', count: statusCounts.delivered, color: 'bg-green-50 text-green-600 border-green-100' },
+                  { status: 'cancelled', label: 'Canceled', count: statusCounts.cancelled, color: 'bg-red-50 text-red-600 border-red-100' },
                 ].map((item) => (
                   <div key={item.status} className={cn("p-6 rounded-[2rem] border transition-all hover:shadow-md text-center", item.color)}>
-                    <div className="text-2xl mb-2">{item.icon}</div>
-                    <p className="text-2xl font-display font-bold mb-1">{item.count}</p>
+                    <p className="text-5xl font-display font-bold mb-1">{item.count}</p>
                     <p className="text-[10px] font-bold uppercase tracking-widest opacity-70">{item.label}</p>
                   </div>
                 ))}
@@ -878,7 +880,7 @@ export default function AdminDashboard() {
                       </div>
                     </div>
                   </div>
-                  <p className="text-mocha/60 text-xs font-body line-clamp-2 mb-8 min-h-[32px]">{item.shortDesc}</p>
+                  <p className="text-mocha/60 text-xs font-body line-clamp-2 mb-8 min-h-[32px]">{item.shortDescription}</p>
                      <div className="flex gap-3 pt-6 border-t border-biscuit/40">
                         {deletingId === item.id ? (
                            <div className="flex-1 flex gap-2 animate-in fade-in zoom-in duration-200">
@@ -1183,6 +1185,7 @@ export default function AdminDashboard() {
                                   onChange={e => setFormData({...formData, category: e.target.value})}
                                >
                                   <option>Cakes</option>
+                                  <option>Pitha</option>
                                   <option>Cookies</option>
                                   <option>Pastries</option>
                                   <option>Breads</option>
@@ -1260,13 +1263,25 @@ export default function AdminDashboard() {
                          </div>
 
                          <div className="space-y-1">
-                            <label className="text-[9px] font-bold text-mocha/40 uppercase tracking-widest ml-1">Marketing Hook</label>
+                            <label className="text-[9px] font-bold text-mocha/40 uppercase tracking-widest ml-1">Short Description *</label>
                             <textarea 
                               rows={2} 
+                              required
                               className="w-full px-3 py-2.5 bg-cream/30 border border-biscuit rounded-xl outline-none focus:border-caramel resize-none text-xs font-body focus:bg-white transition-all shadow-sm" 
-                              placeholder="Brief description..."
-                              value={formData.shortDesc}
-                              onChange={e => setFormData({...formData, shortDesc: e.target.value})}
+                              placeholder="Brief summary for menu card..."
+                              value={formData.shortDescription}
+                              onChange={e => setFormData({...formData, shortDescription: e.target.value})}
+                            ></textarea>
+                         </div>
+
+                         <div className="space-y-1">
+                            <label className="text-[9px] font-bold text-mocha/40 uppercase tracking-widest ml-1">Long Description</label>
+                            <textarea 
+                              rows={4} 
+                              className="w-full px-3 py-2.5 bg-cream/30 border border-biscuit rounded-xl outline-none focus:border-caramel resize-none text-xs font-body focus:bg-white transition-all shadow-sm" 
+                              placeholder="Detailed description for item modal..."
+                              value={formData.longDescription}
+                              onChange={e => setFormData({...formData, longDescription: e.target.value})}
                             ></textarea>
                          </div>
 

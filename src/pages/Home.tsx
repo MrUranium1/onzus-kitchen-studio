@@ -43,7 +43,7 @@ export default function Home() {
         // If DB is empty, use initial static products as a bridge
         // OR if nothing is marked as featured, use a few defaults
         if (allProducts.length === 0) {
-          featured = PRODUCTS.filter(p => [1,4,8,14].includes(p.id));
+          featured = PRODUCTS.filter(p => [1,4,8,14].includes(p.id as number));
         } else if (featured.length === 0) {
           // Show first 4 items as featured if none are explicitly marked
           featured = allProducts.slice(0, 4);
@@ -165,14 +165,14 @@ export default function Home() {
         <div className="marquee-track text-espresso font-body text-sm font-bold">
           {['Fresh Muffins', 'Custom Cakes', 'Homemade Cookies', 'Buttery Croissants', 'Artisan Breads', 'Classic Pastries', 'Blueberry Scones'].map((item, idx) => (
             <React.Fragment key={idx}>
-              <span className="px-6 flex items-center gap-2">🧁 {item}</span>
+              <span className="px-6 flex items-center gap-2">{item}</span>
               <span className="px-3 opacity-40">✦</span>
             </React.Fragment>
           ))}
           {/* Repeating for loop */}
           {['Fresh Muffins', 'Custom Cakes', 'Homemade Cookies', 'Buttery Croissants', 'Artisan Breads', 'Classic Pastries', 'Blueberry Scones'].map((item, idx) => (
             <React.Fragment key={idx + 7}>
-              <span className="px-6 flex items-center gap-2">🧁 {item}</span>
+              <span className="px-6 flex items-center gap-2">{item}</span>
               <span className="px-3 opacity-40">✦</span>
             </React.Fragment>
           ))}
@@ -220,7 +220,7 @@ export default function Home() {
                     <div className="flex justify-between items-start mb-2">
                       <div>
                         <h3 className="font-display text-xl text-espresso">{product.name}</h3>
-                        <p className="text-mocha/60 text-xs font-body mt-0.5">{product.shortDesc}</p>
+                        <p className="text-mocha/60 text-xs font-body mt-0.5">{product.shortDescription}</p>
                       </div>
                       <span className="text-rust font-bold font-body text-lg">৳{product.price}</span>
                     </div>
@@ -303,7 +303,7 @@ export default function Home() {
                     <div className="flex justify-between items-start mb-3">
                       <div>
                         <h3 className="font-display text-xl text-espresso group-hover:text-rust transition-colors">{product.name}</h3>
-                        <p className="text-mocha/60 text-xs font-body mt-1 line-clamp-2">{product.shortDesc}</p>
+                        <p className="text-mocha/60 text-xs font-body mt-1 line-clamp-2">{product.shortDescription}</p>
                       </div>
                       <div className="text-right">
                         <span className="text-rust font-bold font-body text-xl block">৳{product.price}</span>

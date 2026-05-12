@@ -31,12 +31,12 @@ export default function Gallery() {
   }, []);
 
   const categories = [
-    { id: 'all', label: '🖼 All' },
-    { id: 'cakes', label: '🎂 Cakes' },
-    { id: 'pastries', label: '🥐 Pastries' },
-    { id: 'cookies', label: '🍪 Cookies' },
-    { id: 'breads', label: '🍞 Breads' },
-    { id: 'specials', label: '⭐ Specials' },
+    { id: 'all', label: 'All' },
+    { id: 'cakes', label: 'Cakes' },
+    { id: 'pastries', label: 'Pastries' },
+    { id: 'cookies', label: 'Cookies' },
+    { id: 'breads', label: 'Breads' },
+    { id: 'specials', label: 'Specials' },
   ];
 
   const filteredImages = images.filter(img => filter === 'all' || img.cat.includes(filter));
@@ -151,7 +151,7 @@ export default function Gallery() {
           <p className="font-script text-caramel text-xl mb-2">Like What You See?</p>
           <h2 className="font-display text-3xl text-espresso mb-8">Order Your Favourites Today</h2>
           <Link to="/menu" className="inline-flex items-center gap-3 bg-espresso text-cream font-bold text-sm px-10 py-4 rounded-full font-body tracking-wide hover:-translate-y-1 hover:bg-mocha transition-all shadow-lg active:scale-95">
-            🧁 Browse Full Menu
+            Browse Full Menu
           </Link>
         </div>
       </section>

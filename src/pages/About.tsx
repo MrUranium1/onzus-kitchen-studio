@@ -173,10 +173,10 @@ export default function About() {
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link to="/menu" className="bg-honey text-espresso font-bold text-sm px-10 py-4 rounded-full font-body tracking-wide hover:-translate-y-1 transition-all shadow-lg active:scale-95">
-              🧁 Browse Our Menu
+              Browse Our Menu
             </Link>
             <Link to="/contact" className="border-2 border-cream/40 hover:border-cream text-cream font-bold text-sm px-10 py-4 rounded-full transition-all hover:bg-cream/10 font-body tracking-wide active:scale-95">
-              💬 Get in Touch
+              Get in Touch
             </Link>
           </div>
         </div>

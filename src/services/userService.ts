@@ -20,6 +20,7 @@ export interface UserProfile {
   uid: string;
   name: string;
   email: string;
+  role?: 'user' | 'admin';
   phoneNumber?: string;
   address?: string;
   photoURL?: string;
@@ -31,7 +32,6 @@ export interface SavedAddress {
   id: string;
   label: 'Home' | 'Work' | 'Other';
   fullAddress: string;
-  phoneNumber: string;
   landmark?: string;
   isDefault: boolean;
   createdAt?: any;

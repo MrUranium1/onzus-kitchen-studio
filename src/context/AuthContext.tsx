@@ -7,6 +7,7 @@ import {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
   updateProfile,
+  sendEmailVerification,
   User as FirebaseUser 
 } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
@@ -25,12 +26,16 @@ interface AuthContextType {
   isAdmin: boolean;
   loginWithGoogle: () => Promise<void>;
   loginWithEmail: (email: string, pass: string) => Promise<void>;
-  signUpWithEmail: (email: string, pass: string, name: string, phone: string) => Promise<void>;
+  signUpWithEmail: (email: string, pass: string, name: string) => Promise<void>;
+  sendOTP: (email: string) => Promise<void>;
+  verifyOTP: (email: string, otp: string) => Promise<string>;
+  resendVerification: () => Promise<void>;
   logout: () => Promise<void>;
   isAuthModalOpen: boolean;
   openAuthModal: () => void;
   closeAuthModal: () => void;
   loading: boolean;
+  isEmailVerified: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -38,12 +43,15 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [isEmailVerified, setIsEmailVerified] = useState(false);
   const [loading, setLoading] = useState(true);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
+        setIsEmailVerified(firebaseUser.emailVerified);
+        
         setUser({
           uid: firebaseUser.uid,
           name: firebaseUser.displayName || 'Guest',
@@ -116,18 +124,47 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const loginWithEmail = async (email: string, pass: string) => {
+  const loginWithEmail = async (emailInput: string, pass: string) => {
+    const email = emailInput.toLowerCase().trim();
     try {
-      await signInWithEmailAndPassword(auth, email, pass);
+      const userCredential = await signInWithEmailAndPassword(auth, email, pass);
+      if (!userCredential.user.emailVerified) {
+        throw new Error('Email not verified. Please check your inbox.');
+      }
     } catch (error: any) {
       console.error("Email login failed:", error);
       throw error;
     }
   };
 
-  const signUpWithEmail = async (email: string, pass: string, name: string, phone: string) => {
+  const sendOTP = async (emailInput: string) => {
+    const email = emailInput.toLowerCase().trim();
+    const response = await fetch('/api/auth/send-otp', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email })
+    });
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error || 'Failed to send OTP');
+  };
+
+  const verifyOTP = async (emailInput: string, otp: string) => {
+    const email = emailInput.toLowerCase().trim();
+    const response = await fetch('/api/auth/verify-otp', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, otp })
+    });
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error || 'Failed to verify OTP');
+    return data.uid;
+  };
+
+  const signUpWithEmail = async (emailInput: string, pass: string, name: string) => {
+    const email = emailInput.toLowerCase().trim();
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, email, pass);
+      
       await updateProfile(userCredential.user, {
         displayName: name
       });
@@ -135,21 +172,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // Create firestore profile
       await createUserProfile({
         uid: userCredential.user.uid,
-        name: name,
         email: email,
-        phoneNumber: phone
+        name: name,
+        role: 'user'
       });
 
-      // Force user update in state
-      setUser({
-        uid: userCredential.user.uid,
-        name: name,
-        email: email,
-        photoURL: undefined
-      });
+      // Send OTP via our API
+      await sendOTP(email);
+
+      // Sign out since they need to verify via OTP before session is valid
+      await signOut(auth);
+      setUser(null);
     } catch (error: any) {
       console.error("Email signup failed:", error);
       throw error;
+    }
+  };
+
+  const resendVerification = async () => {
+    if (auth.currentUser && !auth.currentUser.emailVerified) {
+      await sendEmailVerification(auth.currentUser);
     }
   };
 
@@ -165,9 +207,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     <AuthContext.Provider value={{ 
       user, 
       isAdmin,
+      isEmailVerified,
       loginWithGoogle, 
       loginWithEmail,
       signUpWithEmail,
+      sendOTP,
+      verifyOTP,
+      resendVerification,
       logout,
       loading,
       isAuthModalOpen, 

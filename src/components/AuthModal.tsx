@@ -1,35 +1,49 @@
-import React, { useState } from 'react';
-import { X, Chrome, Mail, Lock, LogIn, ChevronRight, User, Phone, Eye, EyeOff, AlertCircle, CheckCircle2, Loader2 } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { X, Chrome, Mail, Lock, LogIn, ChevronRight, User, Eye, EyeOff, AlertCircle, CheckCircle2, Loader2, KeyRound } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { motion, AnimatePresence } from 'motion/react';
 import { useNavigate } from 'react-router-dom';
 import { cn } from '../lib/utils';
 
 export default function AuthModal() {
-  const { isAuthModalOpen, closeAuthModal, loginWithGoogle, loginWithEmail, signUpWithEmail, loading } = useAuth();
+  const { isAuthModalOpen, closeAuthModal, loginWithGoogle, loginWithEmail, signUpWithEmail, sendOTP, verifyOTP, logout, loading } = useAuth();
   const navigate = useNavigate();
   const [showEmailForm, setShowEmailForm] = useState(false);
   const [isSignUp, setIsSignUp] = useState(false);
+  const [step, setStep] = useState<'details' | 'otp'>('details');
+  const [resending, setResending] = useState(false);
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
-  const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
+  const [otp, setOtp] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [countdown, setCountdown] = useState(0);
   
+  useEffect(() => {
+    let timer: NodeJS.Timeout;
+    if (countdown > 0) {
+      timer = setTimeout(() => setCountdown(countdown - 1), 1000);
+    }
+    return () => clearTimeout(timer);
+  }, [countdown]);
+
   if (!isAuthModalOpen) return null;
 
   const resetState = () => {
     setShowEmailForm(false);
     setIsSignUp(false);
+    setStep('details');
+    setResending(false);
     setName('');
     setEmail('');
-    setPhone('');
     setPassword('');
+    setOtp('');
     setError('');
     setSuccess('');
     setShowPassword(false);
+    setCountdown(0);
   };
 
   const handleClose = () => {
@@ -48,64 +62,99 @@ export default function AuthModal() {
     }
   };
 
-  const getPasswordStrength = (pass: string) => {
-    if (!pass) return 0;
-    let score = 0;
-    if (pass.length >= 6) score += 1;
-    if (pass.length >= 10) score += 1;
-    if (/[A-Z]/.test(pass)) score += 1;
-    if (/[0-9]/.test(pass)) score += 1;
-    if (/[^A-Za-z0-9]/.test(pass)) score += 1;
-    return score;
+  const handleResendOTP = async () => {
+    if (countdown > 0) return;
+    setResending(true);
+    setError('');
+    try {
+      await sendOTP(email);
+      setSuccess('A new code has been sent to your email.');
+      setCountdown(60);
+    } catch (err: any) {
+      setError(err.message || 'Failed to resend OTP.');
+    } finally {
+      setResending(false);
+    }
   };
 
-  const strength = getPasswordStrength(password);
-  const strengthText = ['Weak', 'Fair', 'Good', 'Strong', 'Excellent'][strength - 1] || '';
-  const strengthColor = ['bg-red-400', 'bg-orange-400', 'bg-yellow-400', 'bg-green-400', 'bg-emerald-500'][strength - 1] || 'bg-gray-200';
+  const validateEmail = (email: string) => {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+  };
 
   const handleEmailAction = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     setSuccess('');
     
+    if (!validateEmail(email)) {
+      setError('Please enter a valid email address.');
+      return;
+    }
+
     try {
       if (isSignUp) {
-        if (!name.trim()) {
-          setError('Name is required');
-          return;
-        }
-        if (!phone.trim()) {
-          setError('Phone number is required');
-          return;
-        }
-        if (password.length < 6) {
-          setError('Password must be at least 6 characters');
-          return;
-        }
-        await signUpWithEmail(email, password, name, phone);
-        setSuccess('Account created successfully! Welcome to the family.');
-        
-        // Auto-login logic (Firebase handles auto-login on signup)
-        setTimeout(() => {
+        if (step === 'details') {
+          if (!name.trim()) {
+            setError('Name is required');
+            return;
+          }
+          if (password.length < 6) {
+            setError('Password must be at least 6 characters');
+            return;
+          }
+          await signUpWithEmail(email, password, name);
+          setStep('otp');
+          setCountdown(60);
+          setSuccess('We’ve sent a 6-digit verification code to your email.');
+        } else {
+          // Verify OTP
+          if (otp.length !== 6) {
+            setError('Please enter the 6-digit code');
+            return;
+          }
+          await verifyOTP(email, otp);
+          setSuccess('Email verified! Logging you in...');
+          
+          // Now login
+          await loginWithEmail(email, password);
           handleClose();
-          navigate('/'); // Redirect to Home
-        }, 1500);
+          navigate('/');
+        }
       } else {
         await loginWithEmail(email, password);
         handleClose();
       }
     } catch (err: any) {
       console.error("Auth error:", err);
-      if (err.code === 'auth/operation-not-allowed') {
+      let errorMessage = err.message || 'Authentication failed.';
+      
+      // Attempt to parse JSON error from handleFirestoreError
+      try {
+        if (typeof err.message === 'string' && err.message.startsWith('{')) {
+          const parsed = JSON.parse(err.message);
+          if (parsed.error) errorMessage = parsed.error;
+        }
+      } catch (e) {}
+
+      if (errorMessage.includes('not verified')) {
+        setError('Your email is not verified. Let\'s verify it now.');
+        // If login failed due to verification, we can trigger OTP flow
+        try {
+          await sendOTP(email);
+          setIsSignUp(true);
+          setStep('otp');
+          setCountdown(60);
+        } catch (otpErr) {
+          setError('Email not verified. Failed to send verification code.');
+        }
+      } else if (err.code === 'auth/operation-not-allowed') {
         setError('Email sign-in is disabled in Firebase.');
       } else if (err.code === 'auth/user-not-found' || err.code === 'auth/wrong-password' || err.code === 'auth/invalid-credential') {
         setError('Invalid credentials.');
       } else if (err.code === 'auth/email-already-in-use') {
         setError('Email already in use.');
-      } else if (err.code === 'auth/weak-password') {
-        setError('Password should be at least 6 characters.');
       } else {
-        setError(err.message || 'Authentication failed.');
+        setError(errorMessage);
       }
     }
   };
@@ -198,90 +247,131 @@ export default function AuthModal() {
                   <button 
                     type="button"
                     onClick={() => {
-                      setShowEmailForm(false);
-                      setIsSignUp(false);
+                      if (step === 'otp') {
+                        setStep('details');
+                        setOtp('');
+                        setError('');
+                        setSuccess('');
+                      } else {
+                        setShowEmailForm(false);
+                        setIsSignUp(false);
+                      }
                     }}
                     className="text-[10px] font-bold text-mocha/40 hover:text-espresso uppercase tracking-widest flex items-center gap-1"
                   >
                     ← Back
                   </button>
-                  <span className="text-[10px] font-bold text-caramel uppercase tracking-widest">{isSignUp ? 'Create Account' : 'Email Login'}</span>
+                  <span className="text-[10px] font-bold text-caramel uppercase tracking-widest">
+                    {step === 'otp' ? 'Verification' : (isSignUp ? 'Create Account' : 'Email Login')}
+                  </span>
                 </div>
 
-                {isSignUp && (
+                {isSignUp && step === 'details' && (
+                  <div className="relative group">
+                    <User className="absolute left-4 top-4 w-4 h-4 text-biscuit group-focus-within:text-caramel transition-colors" />
+                    <input 
+                      type="text"
+                      required
+                      placeholder="Full Name *"
+                      className="w-full bg-white border-2 border-biscuit rounded-2xl pl-11 pr-4 py-3.5 text-sm outline-none focus:border-caramel transition-all font-body"
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                    />
+                  </div>
+                )}
+
+                {step === 'details' && (
                   <>
                     <div className="relative group">
-                      <User className="absolute left-4 top-4 w-4 h-4 text-biscuit group-focus-within:text-caramel transition-colors" />
+                      <Mail className="absolute left-4 top-4 w-4 h-4 text-biscuit group-focus-within:text-caramel transition-colors" />
                       <input 
-                        type="text"
+                        type="email"
                         required
-                        placeholder="Full Name *"
-                        className="w-full bg-white border-2 border-biscuit rounded-2xl pl-11 pr-4 py-3.5 text-sm outline-none focus:border-caramel transition-all font-body active:scale-[0.99] focus:scale-[1.01]"
-                        value={name}
-                        onChange={(e) => setName(e.target.value)}
+                        placeholder="Email Address *"
+                        className="w-full bg-white border-2 border-biscuit rounded-2xl pl-11 pr-4 py-3.5 text-sm outline-none focus:border-caramel transition-all font-body"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
                       />
                     </div>
+
                     <div className="relative group">
-                      <Phone className="absolute left-4 top-4 w-4 h-4 text-biscuit group-focus-within:text-caramel transition-colors" />
+                      <Lock className="absolute left-4 top-4 w-4 h-4 text-biscuit group-focus-within:text-caramel transition-colors" />
                       <input 
-                        type="tel"
+                        type={showPassword ? "text" : "password"}
                         required
-                        placeholder="Phone Number *"
-                        className="w-full bg-white border-2 border-biscuit rounded-2xl pl-11 pr-4 py-3.5 text-sm outline-none focus:border-caramel transition-all font-body active:scale-[0.99] focus:scale-[1.01]"
-                        value={phone}
-                        onChange={(e) => setPhone(e.target.value)}
+                        placeholder="Password *"
+                        className="w-full bg-white border-2 border-biscuit rounded-2xl pl-11 pr-11 py-3.5 text-sm outline-none focus:border-caramel transition-all font-body"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
                       />
+                      <button 
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute right-4 top-4 text-biscuit hover:text-caramel transition-colors"
+                      >
+                        {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      </button>
                     </div>
                   </>
                 )}
 
-                <div className="relative group">
-                  <Mail className="absolute left-4 top-4 w-4 h-4 text-biscuit group-focus-within:text-caramel transition-colors" />
-                  <input 
-                    type="email"
-                    required
-                    placeholder="Email Address *"
-                    className="w-full bg-white border-2 border-biscuit rounded-2xl pl-11 pr-4 py-3.5 text-sm outline-none focus:border-caramel transition-all font-body active:scale-[0.99] focus:scale-[1.01]"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                  />
-                </div>
+                {step === 'otp' && (
+                  <div className="space-y-6 pt-2">
+                    <div className="text-center space-y-2">
+                      <div className="w-16 h-16 bg-cream rounded-full flex items-center justify-center mx-auto mb-4 text-caramel border-2 border-caramel/10 border-dashed">
+                        <KeyRound className="w-8 h-8" />
+                      </div>
+                      <p className="text-sm font-medium text-mocha">Verify your email</p>
+                      <p className="text-xs text-mocha/60 leading-relaxed px-4">
+                        We've sent a 6-digit code to <span className="text-mocha font-bold">{email}</span>.
+                      </p>
+                    </div>
 
-                <div className="relative group">
-                  <Lock className="absolute left-4 top-4 w-4 h-4 text-biscuit group-focus-within:text-caramel transition-colors" />
-                  <input 
-                    type={showPassword ? "text" : "password"}
-                    required
-                    placeholder="Password *"
-                    className="w-full bg-white border-2 border-biscuit rounded-2xl pl-11 pr-11 py-3.5 text-sm outline-none focus:border-caramel transition-all font-body active:scale-[0.99] focus:scale-[1.01]"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                  />
-                  <button 
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-4 top-4 text-biscuit hover:text-caramel transition-colors"
-                  >
-                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                  </button>
-                </div>
+                    <div className="relative group">
+                      <input 
+                        type="text"
+                        maxLength={6}
+                        required
+                        autoFocus
+                        placeholder="000000"
+                        className="w-full bg-white border-2 border-biscuit rounded-2xl px-4 py-4 text-center text-3xl font-display font-bold tracking-[0.5em] outline-none focus:border-caramel transition-all shadow-inner"
+                        value={otp}
+                        onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                      />
+                    </div>
 
-                {isSignUp && password && (
+                    <div className="text-center">
+                      <p className="text-[10px] text-mocha/40 uppercase font-bold tracking-widest mb-2">Didn't receive the code?</p>
+                      <button 
+                        type="button"
+                        onClick={handleResendOTP}
+                        disabled={resending || countdown > 0}
+                        className="text-xs font-bold text-caramel hover:underline disabled:opacity-50 flex items-center justify-center gap-1 mx-auto"
+                      >
+                        {resending ? (
+                          <Loader2 className="w-3 h-3 animate-spin" />
+                        ) : countdown > 0 ? (
+                          `Resend available in ${countdown}s`
+                        ) : (
+                          'Resend OTP'
+                        )}
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {isSignUp && step === 'details' && password && (
                   <div className="px-1 space-y-1.5">
                     <div className="flex justify-between items-center text-[9px] font-bold uppercase tracking-widest text-mocha/40">
-                      <span>Security: {strengthText}</span>
-                      <span>{Math.min(strength * 20, 100)}%</span>
+                      <span>Password Strength</span>
+                      <span className="flex gap-1 items-center">
+                        {password.length < 6 ? 'Too Short' : 
+                          password.length < 10 ? 'Fair' : 'Strong'}
+                      </span>
                     </div>
-                    <div className="h-1.5 w-full bg-mocha/5 rounded-full overflow-hidden flex gap-0.5">
-                      {[1, 2, 3, 4, 5].map((level) => (
-                        <div 
-                          key={level}
-                          className={cn(
-                            "h-full flex-1 transition-all duration-500",
-                            strength >= level ? strengthColor : "bg-mocha/10"
-                          )}
-                        />
-                      ))}
+                    <div className="h-1 w-full bg-mocha/5 rounded-full overflow-hidden flex gap-0.5">
+                      <div className={cn("h-full transition-all duration-500", password.length >= 6 ? "bg-caramel w-1/2" : "bg-red-400 w-1/4")} />
+                      <div className={cn("h-full transition-all duration-500", password.length >= 10 ? "bg-emerald-500 w-1/2" : "bg-mocha/10 w-1/2")} />
                     </div>
                   </div>
                 )}
@@ -289,20 +379,23 @@ export default function AuthModal() {
                 {error && (
                   <motion.div 
                     initial={{ opacity: 0, y: -5 }} animate={{ opacity: 1, y: 0 }}
-                    className="bg-red-50 text-rust p-3 rounded-xl flex items-center gap-2 border border-red-100"
+                    className="bg-red-50 text-rust p-3 rounded-xl flex flex-col gap-2 border border-red-100"
                   >
-                    <AlertCircle className="w-4 h-4 shrink-0" />
-                    <span className="text-[10px] font-bold uppercase leading-tight">{error}</span>
+                    <div className="flex items-start gap-2">
+                      <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+                      <span className="text-[10px] font-black uppercase tracking-tight leading-tight">{error}</span>
+                    </div>
                   </motion.div>
                 )}
 
                 {success && (
                   <motion.div 
                     initial={{ opacity: 0, y: -5 }} animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.2 }}
                     className="bg-green-50 text-green-600 p-3 rounded-xl flex items-center gap-2 border border-green-100"
                   >
                     <CheckCircle2 className="w-4 h-4 shrink-0" />
-                    <span className="text-[10px] font-bold uppercase leading-tight">{success}</span>
+                    <span className="text-[10px] font-black uppercase tracking-tight leading-tight">{success}</span>
                   </motion.div>
                 )}
 
@@ -314,23 +407,26 @@ export default function AuthModal() {
                   {loading ? (
                     <Loader2 className="w-5 h-5 animate-spin" />
                   ) : (
-                    isSignUp ? <ChevronRight className="w-5 h-5" /> : <LogIn className="w-5 h-5" />
+                    step === 'otp' ? null : (isSignUp ? <ChevronRight className="w-5 h-5" /> : <LogIn className="w-5 h-5" />)
                   )}
-                  {loading ? 'Processing...' : (isSignUp ? 'Create Account' : 'Sign In')}
+                  {loading ? 'Processing...' : (step === 'otp' ? 'Verify & Login' : (isSignUp ? 'Create Account' : 'Sign In'))}
                 </button>
 
-                <div className="text-center mt-4">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setIsSignUp(!isSignUp);
-                      setError('');
-                    }}
-                    className="text-[10px] font-bold text-mocha/60 hover:text-caramel uppercase tracking-widest"
-                  >
-                    {isSignUp ? 'Already have an account? Sign In' : "Don't have an account? Sign Up"}
-                  </button>
-                </div>
+                {step === 'details' && (
+                  <div className="text-center mt-4">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsSignUp(!isSignUp);
+                        setError('');
+                        setSuccess('');
+                      }}
+                      className="text-[10px] font-bold text-mocha/60 hover:text-caramel uppercase tracking-widest"
+                    >
+                      {isSignUp ? 'Already have an account? Sign In' : "Don't have an account? Sign Up"}
+                    </button>
+                  </div>
+                )}
               </motion.form>
             )}
           </AnimatePresence>

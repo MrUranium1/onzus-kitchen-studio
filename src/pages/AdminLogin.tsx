@@ -65,7 +65,9 @@ export default function AdminLogin() {
         <div className="text-center mb-10">
           <div className="w-20 h-20 bg-caramel rounded-full flex items-center justify-center mx-auto mb-6 shadow-2xl relative overflow-hidden group">
             <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-500"></div>
-            <span className="text-4xl relative z-10">🧁</span>
+            <span className="text-4xl relative z-10 flex items-center justify-center">
+              <Sparkles className="w-10 h-10 text-white" />
+            </span>
           </div>
           <h1 className="font-script text-4xl text-espresso mb-2">Onzu's Kitchen</h1>
           <p className="text-mocha/60 text-sm font-body uppercase tracking-[0.2em] font-bold">Admin Dashboard</p>
@@ -77,7 +79,7 @@ export default function AdminLogin() {
             animate={{ opacity: 1, x: 0 }}
             className="bg-red-50 text-red-700 p-4 rounded-2xl text-xs font-bold font-body mb-6 border border-red-100 flex items-center gap-3"
           >
-            <div className="w-6 h-6 bg-red-100 rounded-full flex items-center justify-center shrink-0">❌</div>
+            <div className="w-6 h-6 bg-red-100 rounded-full flex items-center justify-center shrink-0 text-red-500 font-bold">!</div>
             {error}
           </motion.div>
         )}
